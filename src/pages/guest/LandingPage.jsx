@@ -1,348 +1,529 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  FileText,
-  Settings,
-  ShieldCheck,
-  Activity,
-  ChevronDown,
-  Mail,
   ArrowRight,
-  Briefcase
+  ChevronDown,
+  Building2,
+  BookOpen,
+  Stamp,
+  Clock,
+  Search,
+  PhoneCall,
+  MapPin,
+  ArrowUp
 } from 'lucide-react';
+import GuestNavbar from '../../components/GuestNavbar';
+import { GarudaLogo, FlagID } from '../../components/IndonesiaSeal';
+import heroBg from '../../assets/hero-bg.png';
 
 export default function LandingPage() {
-  const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('beranda');
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [trackingCode, setTrackingCode] = useState('');
+  const [trackingResult, setTrackingResult] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
   const heroRef = useRef(null);
 
+  const getHeaderOffset = () => 68;
+
+  const scrollToSection = (e, id) => {
+    if (e) e.preventDefault();
+    setActiveSection(id);
+    window.dispatchEvent(new CustomEvent('nav-gliding'));
+
+    if (id === 'beranda') {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+      return;
+    }
+    const element = document.getElementById(id);
+    if (!element) return;
+
+    requestAnimationFrame(() => {
+      const headerOffset = getHeaderOffset();
+      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+      const offsetPosition = elementPosition - headerOffset;
+
+      window.scrollTo({
+        top: Math.max(0, Math.round(offsetPosition)),
+        behavior: 'smooth'
+      });
+    });
+  };
+
+  // Selalu reset posisi scroll ke puncak (Beranda) saat refresh halaman
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+
+    // Paksa ke paling atas (top: 0) saat dimuat / refresh
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+
+    // Bersihkan hash dari URL jika ada saat refresh
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+
+    const handleBeforeUnload = () => {
+      window.scrollTo(0, 0);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
+  // Deteksi seksi aktif saat berada di tengah layar (viewport center) & status tombol Scroll-to-Top
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setShowScrollTop(window.scrollY > 300);
+
+      const viewportCenter = window.scrollY + window.innerHeight / 2;
+
+      const sections = ['beranda', 'layanan', 'prosedur', 'informasi'];
+      let current = 'beranda';
+      for (const id of sections) {
+        const el = document.getElementById(id);
+        if (el) {
+          const elTop = el.getBoundingClientRect().top + window.pageYOffset;
+          const elBottom = elTop + el.offsetHeight;
+          if (viewportCenter >= elTop && viewportCenter < elBottom) {
+            current = id;
+            break;
+          }
+        }
+      }
+      setActiveSection(current);
     };
-    window.addEventListener('scroll', handleScroll);
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setActiveSection(entry.target.id);
-        }
+  const handleTrack = (e) => {
+    e?.preventDefault();
+    if (!trackingCode.trim()) return;
+    setIsSearching(true);
+    setTimeout(() => {
+      setIsSearching(false);
+      setTrackingResult({
+        kode: trackingCode.toUpperCase(),
+        perihal: 'Permohonan Audiensi Pembahasan Program Kerja',
+        pemohon: 'Bambang Sudrajat',
+        tanggal: '28 Oktober 2026',
+        tahap: 3,
+        status: 'Disposisi Pimpinan',
       });
-    }, { threshold: 0.5 }); // Trigger when at least 50% of the section is visible
-
-    const sections = ['beranda', 'layanan', 'prosedur', 'informasi'];
-    sections.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  const scrollToSection = (e, id) => {
-    e.preventDefault();
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const getNavLinkClass = (id) => {
-    return `transition-colors duration-300 relative py-1 ${activeSection === id
-        ? 'text-primary-600 dark:text-primary-400'
-        : 'hover:text-slate-900 dark:hover:text-white'
-      }`;
+    }, 600);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-black text-slate-900 dark:text-neutral-50 font-sans selection:bg-primary-500/20 transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-neutral-950 text-slate-900 dark:text-neutral-100 font-sans snap-container relative selection:bg-red-500 selection:text-white">
 
-      {/* --- AREA TOP: Navbar & Hero --- */}
-      <header className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 dark:bg-black/90 backdrop-blur-md border-b border-slate-200 dark:border-neutral-800 shadow-sm' : 'bg-transparent border-transparent'}`}>
-        <div className="w-full px-4 sm:px-6">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <a href="#beranda" onClick={(e) => scrollToSection(e, 'beranda')} className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer">
-              <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 p-1.5 rounded">
-                <Briefcase size={20} />
-              </div>
-              <span className="font-semibold text-lg tracking-tight text-slate-900 dark:text-white">Portal e-Surat</span>
-            </a>
+      {/* ── Smart Sticky Navbar (Auto Hide & Reveal) ── */}
+      <GuestNavbar activeSection={activeSection} onScrollToSection={scrollToSection} />
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600 dark:text-neutral-300">
-              <a href="#beranda" onClick={(e) => scrollToSection(e, 'beranda')} className={getNavLinkClass('beranda')}>
-                Beranda
-                <span className={`absolute -bottom-1 left-0 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full transition-all duration-300 ease-out ${activeSection === 'beranda' ? 'w-full opacity-100' : 'w-0 opacity-0'}`}></span>
-              </a>
-              <a href="#layanan" onClick={(e) => scrollToSection(e, 'layanan')} className={getNavLinkClass('layanan')}>
-                Spesifikasi Layanan
-                <span className={`absolute -bottom-1 left-0 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full transition-all duration-300 ease-out ${activeSection === 'layanan' ? 'w-full opacity-100' : 'w-0 opacity-0'}`}></span>
-              </a>
-              <a href="#prosedur" onClick={(e) => scrollToSection(e, 'prosedur')} className={getNavLinkClass('prosedur')}>
-                Prosedur
-                <span className={`absolute -bottom-1 left-0 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full transition-all duration-300 ease-out ${activeSection === 'prosedur' ? 'w-full opacity-100' : 'w-0 opacity-0'}`}></span>
-              </a>
-              <a href="#informasi" onClick={(e) => scrollToSection(e, 'informasi')} className={getNavLinkClass('informasi')}>
-                Informasi
-                <span className={`absolute -bottom-1 left-0 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full transition-all duration-300 ease-out ${activeSection === 'informasi' ? 'w-full opacity-100' : 'w-0 opacity-0'}`}></span>
-              </a>
-            </nav>
+      {/* ── Indikator Titik Navigasi Samping (Floating Side Dots Indicator - Desktop Only) ── */}
+      <div
+        className="hidden lg:flex fixed right-6 top-1/2 -translate-y-1/2 z-40 flex-col items-end gap-3.5 pointer-events-auto"
+        role="navigation"
+        aria-label="Navigasi Seksi Cepat"
+      >
+        {[
+          { id: 'beranda', label: 'Beranda' },
+          { id: 'layanan', label: 'Jenis Layanan' },
+          { id: 'prosedur', label: 'Prosedur Pengajuan' },
+          { id: 'informasi', label: 'Pertanyaan Umum' },
+        ].map((item) => {
+          const isActive = activeSection === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={(e) => scrollToSection(e, item.id)}
+              className="group relative flex items-center justify-end p-1.5 focus:outline-none cursor-pointer"
+              aria-label={`Pindah ke bagian ${item.label}`}
+            >
+              {/* Tooltip on hover */}
+              <span className="absolute right-8 px-2.5 py-1 text-[11px] font-semibold rounded-md bg-slate-900/95 dark:bg-slate-100 text-white dark:text-slate-900 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap shadow-lg translate-x-1 group-hover:translate-x-0 border border-slate-700/80 dark:border-slate-300">
+                {item.label}
+              </span>
+              {/* Indicator Dot / Elongated Pill with Red Accent Ring */}
+              <span
+                className={`transition-all duration-300 rounded-full block ${
+                  isActive
+                    ? 'w-2.5 h-7 bg-red-600 shadow-md ring-4 ring-red-500/25'
+                    : 'w-2.5 h-2.5 bg-slate-400/50 dark:bg-neutral-600 hover:bg-red-500 hover:scale-125'
+                }`}
+              />
+            </button>
+          );
+        })}
+      </div>
 
-            {/* CTAs */}
-            <div className="flex items-center gap-4">
-              <Link to="/" className="hidden md:block text-sm font-medium text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white transition-colors">
-                Login Administrator
-              </Link>
-              <Link
-                to="/guest/submit"
-                className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 rounded transition-colors"
-              >
-                Form Pengajuan
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* ── Tombol Melayang Kembali ke Atas (Floating Scroll-To-Top) ── */}
+      <button
+        onClick={() => scrollToSection(null, 'beranda')}
+        className={`fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40 p-2.5 sm:p-3.5 rounded-full bg-red-700 hover:bg-red-800 active:scale-95 text-white shadow-xl shadow-red-950/30 border border-red-600/50 transition-all duration-300 flex items-center justify-center group cursor-pointer ${
+          showScrollTop ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-6 pointer-events-none'
+        }`}
+        aria-label="Kembali ke puncak halaman"
+      >
+        <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-y-0.5 transition-transform" />
+      </button>
 
       <main>
-        {/* Hero Section */}
-        <section id="beranda" className="relative min-h-screen flex flex-col justify-center pt-24 pb-20 overflow-hidden border-b border-slate-200 dark:border-neutral-900" ref={heroRef}>
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center animate-fade-in">
 
-            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight mb-6 max-w-4xl mx-auto leading-tight">
-              Portal Pengajuan Administrasi <br className="hidden md:block" /> & Tata Usaha Terpusat
+        {/* ── Beranda (Hero) ── */}
+        <section
+          id="beranda"
+          ref={heroRef}
+          className="snap-section relative min-h-[calc(100dvh-68px)] lg:min-h-[calc(100vh-68px)] flex flex-col justify-center items-center overflow-hidden bg-slate-900 scroll-mt-[68px] pt-6 pb-10 sm:py-12"
+        >
+          <div className="absolute inset-0">
+            <img src={heroBg} alt="" className="w-full h-full object-cover opacity-25" />
+            <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/70 to-slate-900/90" />
+          </div>
+
+          <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center w-full">
+
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-2.5 sm:mb-4 leading-snug sm:leading-tight">
+              Portal Pelayanan Persuratan
+              <br className="hidden sm:block" />
+              <span className="text-red-300"> &amp; Administrasi Terpadu</span>
             </h1>
 
-            <p className="text-base md:text-lg text-slate-600 dark:text-neutral-400 mb-10 max-w-2xl mx-auto">
-              Digitalisasi layanan birokrasi untuk mempercepat proses pengajuan, pelacakan status, dan pengarsipan dokumen elektronik secara efisien dan transparan.
+            <p className="text-slate-300 text-xs sm:text-base max-w-2xl mx-auto mb-5 sm:mb-7 leading-relaxed px-1 sm:px-2">
+              Ajukan surat masuk, lacak status dokumen, dan kelola administrasi
+              persuratan secara digital tanpa perlu datang ke kantor.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 mb-5 sm:mb-8 w-full max-w-md sm:max-w-none mx-auto">
               <Link
                 to="/guest/submit"
-                className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded shadow-sm transition-all group"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-xs sm:text-sm font-semibold text-white bg-red-700 hover:bg-red-800 active:scale-[0.98] rounded-lg shadow-lg transition-all group"
               >
-                Buat Pengajuan Baru
-                <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                Buat Pengajuan Surat
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
               <a
                 href="#prosedur"
                 onClick={(e) => scrollToSection(e, 'prosedur')}
-                className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-slate-700 dark:text-neutral-200 bg-white dark:bg-black border border-slate-300 dark:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-900 rounded transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 text-xs sm:text-sm font-medium text-white bg-white/10 border border-white/20 hover:bg-white/20 active:scale-[0.98] rounded-lg transition-all"
               >
-                Panduan Prosedur
+                Lihat Prosedur
               </a>
             </div>
 
-            {/* Wireframe/Dashboard Minimalist Concept */}
-            <div className="mt-20 mx-auto max-w-4xl border border-slate-200 dark:border-neutral-800 rounded-t-xl overflow-hidden bg-white dark:bg-neutral-950 shadow-sm">
-              <div className="border-b border-slate-100 dark:border-neutral-900 bg-slate-50 dark:bg-neutral-900 px-4 py-3 flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-neutral-700"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-neutral-700"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-neutral-700"></div>
-              </div>
-              <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6 opacity-70">
-                <div className="col-span-2 space-y-4">
-                  <div className="h-6 w-1/3 bg-slate-200 dark:bg-neutral-800 rounded"></div>
-                  <div className="h-4 w-full bg-slate-100 dark:bg-neutral-900 rounded"></div>
-                  <div className="h-4 w-5/6 bg-slate-100 dark:bg-neutral-900 rounded"></div>
-                  <div className="h-4 w-4/6 bg-slate-100 dark:bg-neutral-900 rounded"></div>
-                </div>
-                <div className="space-y-4">
-                  <div className="h-24 bg-slate-50 dark:bg-neutral-900 border border-slate-100 dark:border-neutral-800 rounded p-4 flex flex-col justify-between">
-                    <div className="h-3 w-1/2 bg-slate-200 dark:bg-neutral-800 rounded"></div>
-                    <div className="h-6 w-1/4 bg-slate-300 dark:bg-neutral-700 rounded"></div>
+            {/* Lacak Dokumen */}
+            <div className="max-w-xl mx-auto bg-white/95 dark:bg-neutral-900/95 backdrop-blur border border-slate-200 dark:border-neutral-700 rounded-xl p-3.5 sm:p-5 shadow-xl text-left w-full">
+              <p className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-neutral-400 mb-2 uppercase tracking-wider">
+                Lacak Status Dokumen
+              </p>
+              <form onSubmit={handleTrack} className="flex gap-2">
+                <input
+                  type="text"
+                  value={trackingCode}
+                  onChange={(e) => setTrackingCode(e.target.value)}
+                  placeholder="Masukkan nomor registrasi"
+                  className="flex-1 min-w-0 px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-neutral-800 border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isSearching}
+                  className="px-3.5 sm:px-5 py-2 sm:py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-red-700 dark:hover:bg-red-800 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50 active:scale-[0.98] cursor-pointer"
+                >
+                  <Search size={14} className="shrink-0" />
+                  <span>{isSearching ? 'Mencari...' : 'Lacak'}</span>
+                </button>
+              </form>
+
+              {trackingResult && (
+                <div className="mt-3.5 pt-3.5 border-t border-slate-200 dark:border-neutral-800 animate-fade-in">
+                  <div className="flex items-start justify-between gap-2 mb-2.5">
+                    <div className="min-w-0">
+                      <span className="text-[10px] sm:text-[11px] font-mono font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/40 px-2 py-0.5 rounded">
+                        {trackingResult.kode}
+                      </span>
+                      <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white mt-1 truncate">
+                        {trackingResult.perihal}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                        {trackingResult.pemohon} &bull; {trackingResult.tanggal}
+                      </p>
+                    </div>
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md shrink-0">
+                      Tahap {trackingResult.tahap}/4
+                    </span>
                   </div>
-                  <div className="h-24 bg-slate-50 dark:bg-neutral-900 border border-slate-100 dark:border-neutral-800 rounded p-4 flex flex-col justify-between">
-                    <div className="h-3 w-1/2 bg-slate-200 dark:bg-neutral-800 rounded"></div>
-                    <div className="h-6 w-1/4 bg-slate-300 dark:bg-neutral-700 rounded"></div>
+
+                  <div className="grid grid-cols-4 gap-1 text-[9px] sm:text-[10px] font-semibold text-center">
+                    <div className="bg-emerald-600 text-white py-1 rounded truncate px-0.5">Registrasi</div>
+                    <div className="bg-emerald-600 text-white py-1 rounded truncate px-0.5">Verifikasi</div>
+                    <div className="bg-amber-500 text-white py-1 rounded truncate px-0.5">Disposisi</div>
+                    <div className="bg-slate-200 dark:bg-neutral-800 text-slate-500 py-1 rounded truncate px-0.5">Selesai</div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </section>
 
-        {/* --- AREA MIDDLE: Feature Section & FAQ --- */}
-        <section id="layanan" className="min-h-screen flex flex-col justify-center py-20 bg-slate-50 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-900">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mb-12">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Spesifikasi Layanan</h2>
-              <p className="text-slate-600 dark:text-neutral-400 max-w-2xl text-sm">
-                Infrastruktur persuratan digital yang dikembangkan dengan standar otomasi, transparansi, dan keamanan tingkat tinggi.
+        {/* ── Layanan ── */}
+        <section
+          id="layanan"
+          className="snap-section py-10 sm:py-14 lg:py-0 lg:min-h-[calc(100vh-68px)] flex flex-col justify-center items-center bg-white dark:bg-neutral-900 border-b border-slate-200 dark:border-neutral-800 scroll-mt-[68px]"
+        >
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            <div className="mb-5 sm:mb-8 text-center sm:text-left">
+              <h2 className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1.5 sm:mb-2">
+                Jenis Layanan
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-neutral-400 max-w-xl mx-auto sm:mx-0">
+                Pilih jenis permohonan sesuai kebutuhan Anda. Seluruh layanan tidak dipungut biaya.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              {/* Feature 1 */}
-              <div className="bg-white dark:bg-neutral-900 p-6 border border-slate-200 dark:border-neutral-800 rounded transition-shadow hover:shadow-sm">
-                <div className="mb-4 text-primary-600 dark:text-primary-400">
-                  <Settings className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Otomatisasi Alur Kerja</h3>
-                <p className="text-sm text-slate-600 dark:text-neutral-400 leading-relaxed">
-                  Proses registrasi dan disposisi dokumen diatur secara terdistribusi dan sistematis, memangkas red-tape birokrasi konvensional.
-                </p>
-              </div>
-
-              {/* Feature 2 */}
-              <div className="bg-white dark:bg-neutral-900 p-6 border border-slate-200 dark:border-neutral-800 rounded transition-shadow hover:shadow-sm">
-                <div className="mb-4 text-indigo-600 dark:text-indigo-400">
-                  <Activity className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Pelacakan Real-time</h3>
-                <p className="text-sm text-slate-600 dark:text-neutral-400 leading-relaxed">
-                  Transparansi penuh terhadap status dokumen pada setiap tahapan verifikasi, validasi, dan persetujuan otoritas.
-                </p>
-              </div>
-
-              {/* Feature 3 */}
-              <div className="bg-white dark:bg-neutral-900 p-6 border border-slate-200 dark:border-neutral-800 rounded transition-shadow hover:shadow-sm">
-                <div className="mb-4 text-green-600 dark:text-green-400">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Integritas Data Terjamin</h3>
-                <p className="text-sm text-slate-600 dark:text-neutral-400 leading-relaxed">
-                  Seluruh lampiran dokumen diproses dan diarsipkan menggunakan basis data terenkripsi untuk mencegah modifikasi tidak sah.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="prosedur" className="min-h-screen flex flex-col justify-center py-20 border-b border-slate-200 dark:border-neutral-900">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-            <div className="mb-12 text-center">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Prosedur Pengajuan</h2>
-              <p className="text-slate-600 dark:text-neutral-400 max-w-2xl mx-auto text-sm">
-                Langkah-langkah sistematis dalam proses pengajuan dokumen administrasi.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
               {[
-                { step: '01', title: 'Registrasi', desc: 'Isi formulir elektronik dengan data yang valid dan unggah lampiran.' },
-                { step: '02', title: 'Verifikasi', desc: 'Sistem dan petugas akan memverifikasi kelengkapan dokumen awal.' },
-                { step: '03', title: 'Pemrosesan', desc: 'Dokumen diproses oleh pihak berwenang untuk persetujuan.' },
-                { step: '04', title: 'Selesai', desc: 'Pengarsipan final dan notifikasi status ke email Anda.' }
+                {
+                  icon: Building2,
+                  title: 'Permohonan Audiensi',
+                  desc: 'Pengajuan pertemuan resmi atau konsultasi dengan pimpinan instansi.',
+                  sla: '1 hari kerja',
+                  color: 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/40',
+                },
+                {
+                  icon: BookOpen,
+                  title: 'Izin Penelitian & Magang',
+                  desc: 'Surat izin riset, skripsi/tesis, atau permohonan magang (PKL).',
+                  sla: '2 hari kerja',
+                  color: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40',
+                },
+                {
+                  icon: Stamp,
+                  title: 'Surat Keterangan',
+                  desc: 'Pengurusan surat keterangan, rekomendasi, atau surat pengantar resmi.',
+                  sla: '1 hari kerja',
+                  color: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40',
+                },
               ].map((item, i) => (
-                <div key={i} className="bg-slate-50 dark:bg-neutral-900/50 p-6 rounded-xl border border-slate-200 dark:border-neutral-800 relative overflow-hidden group hover:border-primary-500 transition-colors">
-                  <div className="text-5xl font-black text-slate-200 dark:text-neutral-800/50 absolute -right-2 -bottom-4 group-hover:text-primary-100 dark:group-hover:text-primary-900/20 transition-colors">
-                    {item.step}
+                <div
+                  key={i}
+                  className="p-4 sm:p-6 rounded-xl border border-slate-200 dark:border-neutral-800 hover:border-slate-300 dark:hover:border-neutral-700 transition-colors bg-white dark:bg-neutral-900/50 shadow-xs flex items-start sm:flex-col gap-3.5 sm:gap-0"
+                >
+                  <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 sm:mb-4 ${item.color}`}>
+                    <item.icon size={20} className="sm:w-5 sm:h-5" />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 relative z-10">{item.title}</h3>
-                  <p className="text-sm text-slate-600 dark:text-neutral-400 relative z-10">{item.desc}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1">
+                      <h3 className="font-semibold text-sm sm:text-base text-slate-900 dark:text-white leading-tight">
+                        {item.title}
+                      </h3>
+                      <span className="self-start sm:self-auto text-[10px] font-medium text-slate-600 dark:text-neutral-400 bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1">
+                        <Clock size={10} />
+                        <span>{item.sla}</span>
+                      </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-neutral-400 leading-relaxed sm:mb-3">
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 sm:mt-8 text-center">
+              <Link
+                to="/guest/submit"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs sm:text-sm font-semibold text-white bg-red-700 hover:bg-red-800 active:scale-[0.98] rounded-lg transition-colors shadow-xs"
+              >
+                Buka Formulir Pengajuan
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Prosedur ── */}
+        <section
+          id="prosedur"
+          className="snap-section py-10 sm:py-14 lg:py-0 lg:min-h-[calc(100vh-68px)] flex flex-col justify-center items-center bg-slate-50 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-900 scroll-mt-[68px]"
+        >
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            <div className="text-center mb-5 sm:mb-8">
+              <h2 className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1.5 sm:mb-2">
+                Prosedur Pengajuan
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-neutral-400 max-w-lg mx-auto">
+                Alur pemrosesan surat dari awal pengajuan hingga dokumen selesai.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5">
+              {[
+                { step: '01', title: 'Isi Formulir', desc: 'Lengkapi data diri dan unggah berkas permohonan.' },
+                { step: '02', title: 'Verifikasi', desc: 'Petugas Tata Usaha memeriksa kelengkapan berkas.' },
+                { step: '03', title: 'Disposisi', desc: 'Surat diteruskan ke pimpinan untuk ditindaklanjuti.' },
+                { step: '04', title: 'Selesai', desc: 'Surat balasan terbit dan dikirim ke email pemohon.' },
+              ].map((item, i) => (
+                <div
+                  key={i}
+                  className="bg-white dark:bg-neutral-900 p-3.5 sm:p-5 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-xs flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] sm:text-xs font-mono font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded">
+                        Tahap {item.step}
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-xs sm:text-base text-slate-900 dark:text-white mb-1 leading-snug">
+                      {item.title}
+                    </h3>
+                    <p className="text-[11px] sm:text-sm text-slate-600 dark:text-neutral-400 leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="informasi" className="min-h-screen flex flex-col justify-center py-20 bg-slate-50 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-900">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mb-10 text-center">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Informasi Operasional</h2>
-              <p className="text-slate-600 dark:text-neutral-400 text-sm max-w-2xl mx-auto">
-                Ketentuan dan prosedur standar operasional (SOP) dalam penggunaan portal layanan persuratan.
+        {/* ── Informasi / FAQ ── */}
+        <section
+          id="informasi"
+          className="snap-section py-10 sm:py-14 lg:py-0 lg:min-h-[calc(100vh-68px)] flex flex-col justify-center items-center bg-white dark:bg-neutral-900 border-b border-slate-200 dark:border-neutral-800 scroll-mt-[68px]"
+        >
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            <div className="text-center mb-5 sm:mb-8">
+              <h2 className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1.5 sm:mb-2">
+                Pertanyaan Umum
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-neutral-400">
+                Informasi seputar penggunaan portal pelayanan persuratan.
               </p>
             </div>
 
-            <div className="space-y-3">
-              {/* FAQ Item 1 */}
-              <details className="group border border-slate-200 dark:border-neutral-800 rounded bg-white dark:bg-neutral-900">
-                <summary className="flex items-center justify-between p-5 cursor-pointer text-sm font-semibold text-slate-900 dark:text-white">
-                  Siapa saja yang memiliki hak akses untuk menggunakan portal ini?
-                  <ChevronDown className="w-4 h-4 text-slate-500 group-open:-rotate-180 transition-transform" />
-                </summary>
-                <div className="px-5 pb-5 text-sm text-slate-600 dark:text-neutral-400 border-t border-slate-100 dark:border-neutral-800 pt-3 mt-1">
-                  Portal ini terbuka dan dapat diakses oleh pihak eksternal (tamu/klien) maupun staf internal yang membutuhkan layanan administrasi dari instansi terkait.
-                </div>
-              </details>
-
-              {/* FAQ Item 2 */}
-              <details className="group border border-slate-200 dark:border-neutral-800 rounded bg-white dark:bg-neutral-900">
-                <summary className="flex items-center justify-between p-5 cursor-pointer text-sm font-semibold text-slate-900 dark:text-white">
-                  Bagaimana spesifikasi teknis untuk unggahan dokumen lampiran?
-                  <ChevronDown className="w-4 h-4 text-slate-500 group-open:-rotate-180 transition-transform" />
-                </summary>
-                <div className="px-5 pb-5 text-sm text-slate-600 dark:text-neutral-400 border-t border-slate-100 dark:border-neutral-800 pt-3 mt-1">
-                  Dokumen lampiran wajib berformat PDF, DOC, atau DOCX. Ukuran maksimal per berkas dibatasi hingga 10 Megabyte (MB) guna menjaga stabilitas dan efisiensi ruang server.
-                </div>
-              </details>
-
-              {/* FAQ Item 3 */}
-              <details className="group border border-slate-200 dark:border-neutral-800 rounded bg-white dark:bg-neutral-900">
-                <summary className="flex items-center justify-between p-5 cursor-pointer text-sm font-semibold text-slate-900 dark:text-white">
-                  Berapa Service Level Agreement (SLA) untuk pemrosesan dokumen?
-                  <ChevronDown className="w-4 h-4 text-slate-500 group-open:-rotate-180 transition-transform" />
-                </summary>
-                <div className="px-5 pb-5 text-sm text-slate-600 dark:text-neutral-400 border-t border-slate-100 dark:border-neutral-800 pt-3 mt-1">
-                  SLA standar untuk verifikasi awal administratif adalah 1x24 jam pada hari kerja aktif, terhitung sejak sistem menerbitkan nomor tiket registrasi pengajuan.
-                </div>
-              </details>
+            <div className="space-y-2.5 sm:space-y-3">
+              {[
+                {
+                  q: 'Apakah layanan ini dikenakan biaya?',
+                  a: 'Tidak. Seluruh layanan persuratan melalui portal ini sepenuhnya gratis dan tidak dipungut biaya dalam bentuk apapun.',
+                },
+                {
+                  q: 'Berapa lama proses verifikasi dokumen?',
+                  a: 'Verifikasi awal dilakukan maksimal 1×24 jam kerja sejak dokumen diterima. Proses disposisi pimpinan membutuhkan 1–3 hari kerja tergantung sifat surat.',
+                },
+                {
+                  q: 'Format file apa yang diterima?',
+                  a: 'Dokumen lampiran harus berformat PDF, DOC, atau DOCX dengan ukuran maksimal 10 MB per berkas.',
+                },
+                {
+                  q: 'Bagaimana cara mengetahui status surat saya?',
+                  a: 'Gunakan fitur "Lacak Status Dokumen" di halaman utama dengan memasukkan nomor registrasi yang Anda terima saat pengajuan.',
+                },
+              ].map((item, i) => (
+                <details
+                  key={i}
+                  className="group border border-slate-200 dark:border-neutral-800 rounded-xl bg-slate-50 dark:bg-neutral-950 overflow-hidden"
+                >
+                  <summary className="flex items-center justify-between p-3.5 sm:p-4 cursor-pointer text-xs sm:text-sm font-semibold text-slate-900 dark:text-white list-none select-none active:bg-slate-100 dark:active:bg-neutral-900">
+                    <span>{item.q}</span>
+                    <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform shrink-0 ml-2" />
+                  </summary>
+                  <div className="px-3.5 pb-3.5 sm:px-4 sm:pb-4 text-xs sm:text-sm text-slate-600 dark:text-neutral-400 leading-relaxed border-t border-slate-200/50 dark:border-neutral-800/50 pt-2.5">
+                    {item.a}
+                  </div>
+                </details>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* --- AREA BOTTOM: CTA & Footer --- */}
-        <section className="py-16 bg-slate-900 dark:bg-neutral-900 border-t border-slate-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">
-              Mulai Proses Pengajuan Dokumen
-            </h2>
-            <p className="text-sm text-slate-400 mb-8 max-w-xl mx-auto">
-              Akses formulir elektronik sekarang untuk mendaftarkan permohonan Anda dan mendapatkan nomor pelacakan dokumen resmi dari sistem.
+        {/* ── Kontak / CTA & Footer ── */}
+        <section
+          id="kontak"
+          className="snap-section py-10 sm:py-14 lg:py-0 lg:min-h-[calc(100vh-68px)] flex flex-col justify-between bg-slate-950 text-white scroll-mt-[68px]"
+        >
+          {/* CTA Area */}
+          <div className="py-8 sm:py-14 flex-1 flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full">
+            <h2 className="text-xl sm:text-3xl font-bold mb-2 sm:mb-3">Mulai Pengajuan Surat</h2>
+            <p className="text-xs sm:text-sm text-slate-400 mb-6 sm:mb-8 max-w-lg mx-auto leading-relaxed">
+              Isi formulir pengajuan untuk mendaftarkan permohonan Anda.
+              Anda akan menerima nomor registrasi untuk melacak status dokumen.
             </p>
             <Link
               to="/guest/submit"
-              className="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-slate-900 bg-white hover:bg-slate-100 rounded transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-xs sm:text-sm font-semibold text-slate-900 bg-white hover:bg-slate-100 active:scale-[0.98] rounded-lg transition-colors shadow-md"
             >
-              Buka Form Pengajuan
+              Buka Formulir Pengajuan
+              <ArrowRight size={14} />
             </Link>
           </div>
+
+          {/* Footer */}
+          <footer className="w-full bg-slate-950 text-slate-400 pt-6 sm:pt-8 pb-6 border-t border-slate-800">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
+
+                <div>
+                  <div className="flex items-center gap-2.5 mb-2.5">
+                    <GarudaLogo className="w-7 h-7 sm:w-8 sm:h-8" />
+                    <div>
+                      <p className="text-[9px] sm:text-[10px] font-bold text-red-500 uppercase tracking-wider leading-none">Republik Indonesia</p>
+                      <p className="text-xs sm:text-sm font-bold text-white leading-tight">Portal e-Surat</p>
+                    </div>
+                  </div>
+                  <p className="text-xs leading-relaxed max-w-xs text-slate-400">
+                    Sistem pelayanan persuratan dan administrasi terpadu
+                    untuk pengelolaan naskah dinas secara elektronik.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-2.5">Navigasi</h4>
+                  <ul className="space-y-2 text-xs">
+                    <li><Link to="/guest" className="hover:text-white transition-colors py-1 inline-block">Beranda</Link></li>
+                    <li><Link to="/guest/submit" className="hover:text-white transition-colors py-1 inline-block">Form Pengajuan</Link></li>
+                    <li><Link to="/" className="hover:text-white transition-colors py-1 inline-block">Portal Administrator</Link></li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-2.5">Kontak &amp; Informasi</h4>
+                  <ul className="space-y-2 text-xs">
+                    <li className="flex items-center gap-2">
+                      <PhoneCall size={12} className="text-slate-500 shrink-0" />
+                      <span>(021) 1500-XXX</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <MapPin size={12} className="text-slate-500 shrink-0 mt-0.5" />
+                      <span>Jl. Medan Merdeka Barat No. 17, Jakarta Pusat</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Clock size={12} className="text-slate-500 shrink-0" />
+                      <span>Senin–Jumat, 08.00–16.00 WIB</span>
+                    </li>
+                  </ul>
+                </div>
+
+              </div>
+
+              <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-slate-500 text-center sm:text-left">
+                <div className="flex items-center gap-2">
+                  <FlagID className="w-5 h-3.5" />
+                  <span>&copy; {new Date().getFullYear()} Sistem Administrasi Terpadu. Hak cipta dilindungi.</span>
+                </div>
+              </div>
+            </div>
+          </footer>
         </section>
+
       </main>
 
-      <footer className="bg-white dark:bg-black border-t border-slate-200 dark:border-neutral-800 pt-12 pb-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <Briefcase className="text-slate-900 dark:text-white w-5 h-5" />
-                <span className="font-semibold text-base text-slate-900 dark:text-white tracking-tight">Portal e-Surat</span>
-              </div>
-              <p className="text-slate-500 dark:text-neutral-400 max-w-sm text-xs leading-relaxed">
-                Sistem Informasi Manajemen Persuratan Terpadu. Platform resmi untuk pengelolaan administrasi, registrasi dokumen, dan pengarsipan digital instansi.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">Tautan Sistem</h4>
-              <ul className="space-y-2 text-xs text-slate-500 dark:text-neutral-400">
-                <li><a href="#layanan" onClick={(e) => scrollToSection(e, 'layanan')} className="hover:text-slate-900 dark:hover:text-white transition-colors">Spesifikasi Layanan</a></li>
-                <li><a href="#prosedur" onClick={(e) => scrollToSection(e, 'prosedur')} className="hover:text-slate-900 dark:hover:text-white transition-colors">SOP Pengajuan</a></li>
-                <li><Link to="/" className="hover:text-slate-900 dark:hover:text-white transition-colors">Portal Administrator</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">Bantuan & Regulasi</h4>
-              <ul className="space-y-2 text-xs text-slate-500 dark:text-neutral-400">
-                <li><a href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Pusat Bantuan</a></li>
-                <li><a href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Kebijakan Privasi</a></li>
-                <li><a href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Ketentuan Layanan</a></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="pt-6 border-t border-slate-200 dark:border-neutral-800 text-xs text-slate-500 dark:text-neutral-500 flex flex-col md:flex-row justify-between items-center">
-            <p>&copy; {new Date().getFullYear()} Sistem Administrasi Terpadu. Hak cipta dilindungi.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

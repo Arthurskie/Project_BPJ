@@ -1,14 +1,37 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { Menu, Bell, UserCircle, Check, LogOut, User, Settings } from 'lucide-react';
 
 export default function AdminLayout() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Default sidebar closed on mobile, open on desktop
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const notificationRef = useRef(null);
   const profileRef = useRef(null);
+  const location = useLocation();
+
+  // Close sidebar on route change (mobile only)
+  useEffect(() => {
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+    // Also close dropdowns on navigation
+    setShowNotifications(false);
+    setShowProfileMenu(false);
+  }, [location.pathname]);
+
+  // Handle window resize — open sidebar on desktop, close on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Close notifications dropdown when clicking outside
   useEffect(() => {
@@ -38,22 +61,22 @@ export default function AdminLayout() {
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       {/* Main Content Area */}
-      <div className="flex flex-col flex-1 w-full overflow-hidden">
+      <div className="flex flex-col flex-1 w-full min-w-0 overflow-hidden">
         {/* Top Navbar */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-neutral-800 bg-white dark:bg-black z-10 sticky top-0 shadow-sm transition-colors duration-300">
-          <div className="flex items-center gap-4">
+        <header className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-neutral-800 bg-white dark:bg-black z-10 sticky top-0 shadow-sm transition-colors duration-300">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-neutral-900 transition-colors"
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-neutral-900 transition-colors shrink-0"
             >
               <Menu size={20} />
             </button>
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
               Form System Admin
             </h1>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             {/* Notifications */}
             <div className="relative" ref={notificationRef}>
               <button 
@@ -64,9 +87,9 @@ export default function AdminLayout() {
                 <span className="absolute top-2 right-2 w-2 h-2 bg-primary-600 rounded-full border-2 border-white transition-colors"></span>
               </button>
 
-              {/* Dropdown */}
+              {/* Dropdown — full-width on mobile, fixed-width on desktop */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-black rounded-lg shadow-lg border border-slate-200 dark:border-neutral-800 overflow-hidden origin-top-right animate-dropdown">
+                <div className="fixed sm:absolute left-0 sm:left-auto right-0 sm:right-0 top-[calc(100%+0.5rem)] sm:top-auto sm:mt-2 w-full sm:w-80 bg-white dark:bg-black rounded-none sm:rounded-lg shadow-lg border-y sm:border border-slate-200 dark:border-neutral-800 overflow-hidden sm:origin-top-right animate-dropdown z-50 max-h-[80vh] overflow-y-auto">
                   <div className="p-4 border-b border-slate-100 dark:border-neutral-800 flex justify-between items-center bg-slate-50/50 dark:bg-neutral-900/50">
                     <h3 className="font-semibold text-slate-800 dark:text-white">Notifications</h3>
                     <button className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors duration-300">Mark all read</button>
@@ -91,7 +114,7 @@ export default function AdminLayout() {
 
             <div className="relative" ref={profileRef}>
               <div 
-                className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-neutral-800 cursor-pointer group"
+                className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-slate-200 dark:border-neutral-800 cursor-pointer group"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
               >
                 <UserCircle size={28} className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
@@ -103,8 +126,13 @@ export default function AdminLayout() {
 
               {/* Profile Dropdown */}
               {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-black rounded-lg shadow-lg border border-slate-200 dark:border-neutral-800 overflow-hidden origin-top-right animate-dropdown">
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-black rounded-lg shadow-lg border border-slate-200 dark:border-neutral-800 overflow-hidden origin-top-right animate-dropdown z-50">
                   <div className="py-1">
+                    {/* Show name on mobile since it's hidden in the header */}
+                    <div className="md:hidden px-4 py-2 border-b border-slate-100 dark:border-neutral-800">
+                      <p className="font-medium text-sm text-slate-900 dark:text-white">Admin User</p>
+                      <p className="text-xs text-slate-500 dark:text-neutral-400">admin@system.com</p>
+                    </div>
                     <Link to="/profile" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-neutral-900 hover:text-slate-900 dark:hover:text-white transition-colors" onClick={() => setShowProfileMenu(false)}>
                       <User size={16} />
                       My Profile
@@ -127,7 +155,7 @@ export default function AdminLayout() {
 
         {/* Page Content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 dark:bg-black transition-colors duration-300">
-          <div className="p-6 md:p-8">
+          <div className="p-4 sm:p-6 md:p-8">
             <Outlet />
           </div>
         </main>

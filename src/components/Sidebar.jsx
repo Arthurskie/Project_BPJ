@@ -1,8 +1,10 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FileText, Settings, Database, Activity, X } from 'lucide-react';
 
 export default function Sidebar({ isOpen, setIsOpen }) {
+  const location = useLocation();
+
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
     { name: 'Forms', icon: FileText, path: '/forms' },
@@ -10,6 +12,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     { name: 'Activity', icon: Activity, path: '/activity' },
     { name: 'Settings', icon: Settings, path: '/settings' },
   ];
+
+  const handleNavClick = () => {
+    // Close sidebar on mobile when a nav item is clicked
+    if (window.innerWidth < 1024) {
+      setIsOpen(false);
+    }
+  };
 
   return (
     <>
@@ -27,9 +36,9 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-20'
         } flex flex-col`}
       >
-        <div className="flex items-center justify-between h-16 px-6 border-b border-slate-200 dark:border-neutral-800 shrink-0">
+        <div className="flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6 border-b border-slate-200 dark:border-neutral-800 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-neutral-100 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-neutral-100 flex items-center justify-center shrink-0">
               <FileText size={18} className="text-white dark:text-neutral-900" />
             </div>
             <span className={`font-bold text-lg text-slate-800 dark:text-white tracking-tight ${!isOpen && 'lg:hidden'} whitespace-nowrap`}>
@@ -37,20 +46,21 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             </span>
           </div>
           <button 
-            className="lg:hidden text-slate-500 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+            className="lg:hidden p-1 text-slate-500 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400 transition-colors"
             onClick={() => setIsOpen(false)}
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="flex-1 py-6 px-3 overflow-y-auto overflow-x-hidden flex flex-col gap-2">
+        <div className="flex-1 py-4 sm:py-6 px-3 overflow-y-auto overflow-x-hidden flex flex-col gap-1 sm:gap-2">
           {menuItems.map((item) => (
             <NavLink
               key={item.name}
               to={item.path}
+              onClick={handleNavClick}
               className={({ isActive }) => 
-                `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group ${
+                `flex items-center gap-3 px-3 py-2.5 sm:py-2 rounded-lg transition-colors group ${
                   isActive 
                     ? 'bg-slate-100 dark:bg-neutral-900 text-slate-900 dark:text-white font-semibold' 
                     : 'text-slate-500 dark:text-neutral-400 hover:bg-slate-50 dark:hover:bg-neutral-900/50 hover:text-slate-900 dark:hover:text-white'

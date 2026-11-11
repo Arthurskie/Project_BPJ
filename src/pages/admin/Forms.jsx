@@ -11,9 +11,9 @@ export default function Forms() {
   const navigate = useNavigate();
   const { forms: allForms } = useFormContext();
 
-  // Auto focus search on mount
+  // Auto focus search on mount (only on desktop to avoid mobile keyboard pop-up)
   useEffect(() => {
-    if (searchInputRef.current) {
+    if (searchInputRef.current && window.innerWidth >= 768) {
       searchInputRef.current.focus();
     }
   }, []);
@@ -33,24 +33,24 @@ export default function Forms() {
   }, [searchQuery]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Manage Forms</h2>
-          <p className="text-slate-500 dark:text-neutral-400 text-sm mt-1">Create, edit, and view all your forms in one place.</p>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">Manage Forms</h2>
+          <p className="text-slate-500 dark:text-neutral-400 text-xs sm:text-sm mt-1">Create, edit, and view all your forms in one place.</p>
         </div>
         <button 
           onClick={() => navigate('/forms/new')}
-          className="flex items-center gap-2 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-neutral-100 text-white dark:text-neutral-900 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors"
+          className="flex items-center gap-2 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-neutral-100 text-white dark:text-neutral-900 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm w-full sm:w-auto justify-center sm:justify-start"
         >
           <Plus size={16} />
           Create Form
         </button>
       </div>
 
-      <div className="bg-white dark:bg-black border border-slate-200 dark:border-neutral-800 rounded-xl shadow-sm p-6">
+      <div className="bg-white dark:bg-black border border-slate-200 dark:border-neutral-800 rounded-xl shadow-sm p-4 sm:p-6">
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
@@ -59,10 +59,10 @@ export default function Forms() {
               placeholder="Search forms by name or status..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white dark:bg-black border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 dark:focus:border-primary-400 transition-all shadow-sm"
+              className="w-full bg-white dark:bg-black border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-lg pl-10 pr-4 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 dark:focus:border-primary-400 transition-all shadow-sm"
             />
           </div>
-          <button className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-neutral-900 hover:bg-slate-50 dark:hover:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-lg text-slate-700 dark:text-neutral-300 text-sm font-medium transition-colors shadow-sm">
+          <button className="flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 bg-white dark:bg-neutral-900 hover:bg-slate-50 dark:hover:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-lg text-slate-700 dark:text-neutral-300 text-sm font-medium transition-colors shadow-sm">
             <Filter size={16} />
             Filters
           </button>
@@ -70,9 +70,9 @@ export default function Forms() {
 
         {/* List or Empty State */}
         {filteredForms.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {filteredForms.map(form => (
-              <div key={form.id} className="p-5 border border-slate-200 dark:border-neutral-800 rounded-xl bg-white dark:bg-neutral-900/50 hover:border-slate-300 dark:hover:border-neutral-700 transition-colors cursor-pointer group">
+              <div key={form.id} className="p-4 sm:p-5 border border-slate-200 dark:border-neutral-800 rounded-xl bg-white dark:bg-neutral-900/50 hover:border-slate-300 dark:hover:border-neutral-700 transition-colors cursor-pointer group active:scale-[0.98]">
                 <div className="flex justify-between items-start mb-3">
                   <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-neutral-300">
                     <span className={`w-2 h-2 rounded-full ${
@@ -86,12 +86,12 @@ export default function Forms() {
                     {form.responses} <span className="font-normal text-slate-400 dark:text-neutral-500">resp</span>
                   </span>
                 </div>
-                <h3 className="font-medium text-slate-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">{form.name}</h3>
+                <h3 className="font-medium text-sm sm:text-base text-slate-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">{form.name}</h3>
               </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 px-4 text-center border border-dashed border-slate-300 dark:border-neutral-700 rounded-xl bg-slate-50 dark:bg-neutral-900/50">
+          <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4 text-center border border-dashed border-slate-300 dark:border-neutral-700 rounded-xl bg-slate-50 dark:bg-neutral-900/50">
             <div className="w-12 h-12 bg-white dark:bg-neutral-900 rounded-lg flex items-center justify-center mb-4 shadow-sm border border-slate-200 dark:border-neutral-700">
               <FileTextIcon className="text-slate-400 dark:text-neutral-500 w-6 h-6" />
             </div>

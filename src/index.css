@@ -2,17 +2,31 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme {
-  --font-sans: "Inter", "Roboto", sans-serif;
-  
-  /* Sleek, Professional Primary (Deep Slate/Indigo) */
-  --color-primary-400: #818cf8;
-  --color-primary-500: #6366f1;
-  --color-primary-600: #4f46e5;
-  --color-primary-700: #4338ca;
-  --color-primary-900: #312e81;
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 68px;
+}
 
-  /* Refined Custom Animations */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+@theme {
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  
+  /* Primary — Indonesian Red */
+  --color-primary-400: #f87171;
+  --color-primary-500: #ef4444;
+  --color-primary-600: #dc2626;
+  --color-primary-700: #b91c1c;
+  --color-primary-900: #7f1d1d;
+
+  /* Animations */
   --animate-dropdown: dropdown 0.15s ease-out forwards;
   --animate-fade-in: fade-in 0.3s ease-out forwards;
 
@@ -28,17 +42,31 @@
   }
 
   @keyframes fade-in {
-    0% {
-      opacity: 0;
-    }
-    100% {
-      opacity: 1;
-    }
+    0% { opacity: 0; }
+    100% { opacity: 1; }
   }
 }
 
+/* Section Scroll Snapping (Desktop Only - Smooth 1-Screen Snap) */
+@media (min-width: 1024px) {
+  html {
+    scroll-snap-type: y mandatory;
+  }
+  .snap-section {
+    min-height: calc(100vh - 68px);
+    min-height: calc(100dvh - 68px);
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+}
+
+.snap-section {
+  box-sizing: border-box;
+  scroll-margin-top: 68px;
+}
+
 body {
-  @apply bg-slate-50 text-slate-900 font-sans min-h-screen antialiased selection:bg-primary-500/20 dark:bg-black dark:text-neutral-50 transition-colors duration-300;
+  @apply bg-slate-50 text-slate-900 font-sans min-h-screen antialiased dark:bg-neutral-950 dark:text-neutral-50 transition-colors duration-300;
 }
 
 ::-webkit-scrollbar {
@@ -49,5 +77,18 @@ body {
   @apply bg-transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+  @apply bg-slate-300 rounded-full hover:bg-slate-400 dark:bg-neutral-700;
+}
+
+@media print {
+  header, footer, nav, .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .print-only-container {
+    display: block !important;
+  }
 }
