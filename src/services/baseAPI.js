@@ -14,7 +14,9 @@ const STORAGE_KEYS = {
   USERS: 'bpj_db_users',
   SUBMISSIONS: 'bpj_db_submissions',
   SESSION: 'bpj_auth_session',
-  STATS: 'bpj_db_stats'
+  STATS: 'bpj_db_stats',
+  AUDIT_LOGS: 'bpj_db_audit_logs',
+  LETTER_NUMBERS: 'bpj_db_letter_numbers'
 };
 
 const DEFAULT_USERS = [
@@ -82,8 +84,46 @@ const DEFAULT_SUBMISSIONS = [
     noHp: '085211223344',
     status: 'selesai',
     notes: 'Surat telah diterbitkan. Silakan unduh dokumen resmi atau ambil di loket kelurahan.',
+    nomorSurat: '470 / 001 / KEL.CKR / XI / 2026',
+    pejabatTTD: 'Budi Santoso, S.STP (Lurah)',
+    catatanVerifikasi: 'Berkas lengkap dan sesuai kriteria verifikasi.',
+    verifiedBy: 'usr-001',
+    verifiedAt: new Date(Date.now() - 86400000).toISOString(),
     createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
     updatedAt: new Date(Date.now() - 86400000).toISOString()
+  }
+];
+
+const DEFAULT_AUDIT_LOGS = [
+  {
+    id: 'log-001',
+    adminId: 'usr-001',
+    adminName: 'Budi Santoso, S.STP',
+    action: 'verify_submission',
+    targetId: 'sub-003',
+    targetType: 'submission',
+    details: 'Menyetujui permohonan SKTM dan menerbitkan nomor surat 470 / 001 / KEL.CKR / XI / 2026',
+    timestamp: new Date(Date.now() - 86400000).toISOString()
+  },
+  {
+    id: 'log-002',
+    adminId: 'usr-002',
+    adminName: 'Siti Rahmawati, S.Sos',
+    action: 'update_status',
+    targetId: 'sub-002',
+    targetType: 'submission',
+    details: 'Mengubah status permohonan menjadi diproses untuk verifikasi tanda tangan',
+    timestamp: new Date(Date.now() - 14400000).toISOString()
+  }
+];
+
+const DEFAULT_LETTER_NUMBERS = [
+  {
+    id: 'ln-001',
+    nomorSurat: '470 / 001 / KEL.CKR / XI / 2026',
+    year: 2026,
+    seq: 1,
+    createdAt: new Date(Date.now() - 86400000).toISOString()
   }
 ];
 
@@ -138,6 +178,40 @@ export const localDB = {
     } else {
       localStorage.removeItem(STORAGE_KEYS.SESSION);
     }
+  },
+
+  getAuditLogs: () => {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS);
+      if (!data) {
+        localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(DEFAULT_AUDIT_LOGS));
+        return DEFAULT_AUDIT_LOGS;
+      }
+      return JSON.parse(data);
+    } catch {
+      return DEFAULT_AUDIT_LOGS;
+    }
+  },
+
+  saveAuditLogs: (logs) => {
+    localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(logs));
+  },
+
+  getLetterNumbers: () => {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.LETTER_NUMBERS);
+      if (!data) {
+        localStorage.setItem(STORAGE_KEYS.LETTER_NUMBERS, JSON.stringify(DEFAULT_LETTER_NUMBERS));
+        return DEFAULT_LETTER_NUMBERS;
+      }
+      return JSON.parse(data);
+    } catch {
+      return DEFAULT_LETTER_NUMBERS;
+    }
+  },
+
+  saveLetterNumbers: (numbers) => {
+    localStorage.setItem(STORAGE_KEYS.LETTER_NUMBERS, JSON.stringify(numbers));
   }
 };
 

@@ -1,96 +1,164 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Sun, Moon, Shield, Database, CheckCircle2 } from 'lucide-react';
+import Alert from '../../components/Alert';
 
 export default function Settings() {
-  const [emailNotifications, setEmailNotifications] = useState(true);
   const { darkMode, toggleDarkMode } = useTheme();
-  const [autoSave, setAutoSave] = useState(true);
-  const settingsRef = useRef(null);
+  const [emailNotif, setEmailNotif] = useState(true);
+  const [autoNumbering, setAutoNumbering] = useState(true);
+  const [alert, setAlert] = useState(null);
 
-  useEffect(() => {
-    if (settingsRef.current) {
-      settingsRef.current.style.opacity = '0';
-      settingsRef.current.style.transform = 'translateY(10px)';
-      const timer = setTimeout(() => {
-        if (settingsRef.current) {
-          settingsRef.current.style.transition = 'all 0.4s ease-out';
-          settingsRef.current.style.opacity = '1';
-          settingsRef.current.style.transform = 'translateY(0)';
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, []);
+  const handleSave = () => {
+    setAlert({
+      type: 'success',
+      message: 'Preferensi sistem berhasil disimpan.'
+    });
+  };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">System Settings</h2>
-        <p className="text-slate-500 dark:text-neutral-400 text-xs sm:text-sm mt-1">Manage your preferences and system configuration.</p>
+    <div className="space-y-6 max-w-4xl">
+      <div className="pb-4 border-b border-slate-200 dark:border-neutral-800">
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+          Pengaturan Sistem
+        </h2>
+        <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
+          Konfigurasi preferensi tampilan, pemberitahuan layanan, dan parameter kedinasan.
+        </p>
       </div>
 
-      <div className="bg-white dark:bg-black border border-slate-200 dark:border-neutral-800 rounded-xl shadow-sm p-4 sm:p-6 md:p-8 max-w-3xl" ref={settingsRef}>
-        <div className="space-y-6 sm:space-y-8">
-          
-          {/* Section 1 */}
-          <div>
-            <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-neutral-800 pb-2 mb-3 sm:mb-4">Preferences</h3>
-            <div className="space-y-3 sm:space-y-4">
-              
-              <div className="flex items-center justify-between gap-3 p-3 sm:p-4 bg-slate-50 dark:bg-neutral-900/50 rounded-lg border border-slate-200 dark:border-neutral-800">
-                <div className="min-w-0">
-                  <h4 className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm">Email Notifications</h4>
-                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Receive an email every time a form is submitted.</p>
-                </div>
-                <button 
-                  onClick={() => setEmailNotifications(!emailNotifications)}
-                  className={`w-10 h-5 rounded-full transition-colors duration-300 relative shrink-0 ${emailNotifications ? 'bg-slate-900 dark:bg-white' : 'bg-slate-200 dark:bg-neutral-700'}`}
-                >
-                  <span className={`absolute top-0.5 left-0.5 bg-white dark:bg-black w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${emailNotifications ? 'translate-x-5' : 'translate-x-0'}`}></span>
-                </button>
-              </div>
+      {alert && (
+        <Alert type={alert.type} onClose={() => setAlert(null)}>
+          {alert.message}
+        </Alert>
+      )}
 
-              <div className="flex items-center justify-between gap-3 p-3 sm:p-4 bg-slate-50 dark:bg-neutral-900/50 rounded-lg border border-slate-200 dark:border-neutral-800">
-                <div className="min-w-0">
-                  <h4 className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm">Dark Mode (Demo)</h4>
-                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Toggle dark mode interface.</p>
-                </div>
-                <button 
-                  onClick={toggleDarkMode}
-                  className={`w-10 h-5 rounded-full transition-colors duration-300 relative shrink-0 ${darkMode ? 'bg-slate-900 dark:bg-white' : 'bg-slate-200 dark:bg-neutral-700'}`}
-                >
-                  <span className={`absolute top-0.5 left-0.5 bg-white dark:bg-black w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${darkMode ? 'translate-x-5' : 'translate-x-0'}`}></span>
-                </button>
-              </div>
-
-            </div>
+      <div className="space-y-4">
+        {/* Pengaturan Tampilan */}
+        <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl p-5 shadow-xs">
+          <div className="flex items-center gap-2 mb-3">
+            {darkMode ? <Moon className="w-4 h-4 text-amber-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              Tema Antarmuka
+            </h3>
           </div>
-
-          {/* Section 2 */}
-          <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-neutral-800 pb-2 mb-3 sm:mb-4">Form Defaults</h3>
-            <div className="space-y-3 sm:space-y-4">
-              <div className="flex items-center justify-between gap-3 p-3 sm:p-4 bg-slate-50 dark:bg-neutral-900/50 rounded-lg border border-slate-200 dark:border-neutral-800">
-                <div className="min-w-0">
-                  <h4 className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm">Auto-save drafts</h4>
-                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Automatically save forms while editing.</p>
-                </div>
-                <button 
-                  onClick={() => setAutoSave(!autoSave)}
-                  className={`w-10 h-5 rounded-full transition-colors duration-300 relative shrink-0 ${autoSave ? 'bg-slate-900 dark:bg-white' : 'bg-slate-200 dark:bg-neutral-700'}`}
-                >
-                  <span className={`absolute top-0.5 left-0.5 bg-white dark:bg-black w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${autoSave ? 'translate-x-5' : 'translate-x-0'}`}></span>
-                </button>
-              </div>
+          <p className="text-xs text-slate-500 dark:text-neutral-400 mb-4">
+            Pilih mode tampilan layar yang nyaman untuk bertugas.
+          </p>
+          <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-neutral-950 rounded-lg border border-slate-200 dark:border-neutral-800">
+            <div>
+              <p className="text-xs font-semibold text-slate-800 dark:text-white">
+                {darkMode ? 'Mode Gelap (Dark Mode)' : 'Mode Terang (Light Mode)'}
+              </p>
+              <p className="text-[11px] text-slate-400 dark:text-neutral-500 mt-0.5">
+                Mengubah palet warna sistem secara menyeluruh.
+              </p>
             </div>
-          </div>
-
-          <div className="pt-4 flex justify-end">
-            <button className="w-full sm:w-auto bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-neutral-100 text-white dark:text-neutral-900 px-6 py-2.5 rounded-lg font-medium shadow-sm transition-colors text-sm">
-              Save Changes
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                darkMode ? 'bg-red-700' : 'bg-slate-300'
+              }`}
+            >
+              <span
+                className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-xs ${
+                  darkMode ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
             </button>
           </div>
+        </div>
 
+        {/* Parameter Kedinasan */}
+        <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl p-5 shadow-xs">
+          <div className="flex items-center gap-2 mb-3">
+            <Shield className="w-4 h-4 text-red-700 dark:text-red-400" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              Parameter Penomoran Surat
+            </h3>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-neutral-950 rounded-lg border border-slate-200 dark:border-neutral-800">
+              <div>
+                <p className="text-xs font-semibold text-slate-800 dark:text-white">
+                  Auto-generate Nomor Urut Otomatis
+                </p>
+                <p className="text-[11px] text-slate-400 dark:text-neutral-500 mt-0.5">
+                  Secara otomatis membuat nomor surat berformat <code>470 / [Seq] / KEL.CKR / [Bulan] / [Tahun]</code> saat diverifikasi.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAutoNumbering(!autoNumbering)}
+                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                  autoNumbering ? 'bg-red-700' : 'bg-slate-300'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-xs ${
+                    autoNumbering ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-neutral-950 rounded-lg border border-slate-200 dark:border-neutral-800">
+              <div>
+                <p className="text-xs font-semibold text-slate-800 dark:text-white">
+                  Notifikasi Email Petugas
+                </p>
+                <p className="text-[11px] text-slate-400 dark:text-neutral-500 mt-0.5">
+                  Menerima pemberitahuan email kedinasan saat permohonan baru masuk dari warga.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmailNotif(!emailNotif)}
+                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                  emailNotif ? 'bg-red-700' : 'bg-slate-300'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-xs ${
+                    emailNotif ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Database & Penyimpanan */}
+        <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl p-5 shadow-xs">
+          <div className="flex items-center gap-2 mb-3">
+            <Database className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              Data & Penyimpanan
+            </h3>
+          </div>
+          <div className="p-3.5 bg-slate-50 dark:bg-neutral-950 rounded-lg border border-slate-200 dark:border-neutral-800 text-xs text-slate-600 dark:text-neutral-400">
+            <div className="flex items-center justify-between">
+              <span>Status Penyimpanan Lokal:</span>
+              <span className="font-semibold text-emerald-600 flex items-center gap-1">
+                <CheckCircle2 size={13} />
+                Tersinkronisasi
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Data surat dinas, log audit, dan pengguna tersimpan dengan aman pada storage lokal browser.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <button
+            type="button"
+            onClick={handleSave}
+            className="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+          >
+            Simpan Konfigurasi
+          </button>
         </div>
       </div>
     </div>

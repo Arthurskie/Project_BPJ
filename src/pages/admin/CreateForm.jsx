@@ -50,7 +50,7 @@ export default function CreateForm() {
       // Could also pass description and fields if we were storing them
     });
     
-    navigate('/forms');
+    navigate('/admin/forms');
   };
 
   const renderFieldIcon = (type) => {
@@ -87,9 +87,9 @@ export default function CreateForm() {
           </button>
           <button 
             onClick={handleSave}
-            className="px-4 py-2 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-neutral-100 text-white dark:text-neutral-900 rounded-lg text-sm font-medium transition-colors shadow-sm"
+            className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-xs cursor-pointer"
           >
-            Save Form
+            Simpan Template
           </button>
         </div>
       </div>

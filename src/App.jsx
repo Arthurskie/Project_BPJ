@@ -27,6 +27,8 @@ const Activity = lazy(() => import('./pages/admin/Activity'));
 const Settings = lazy(() => import('./pages/admin/Settings'));
 const Profile = lazy(() => import('./pages/admin/Profile'));
 const Submissions = lazy(() => import('./pages/admin/Submissions'));
+const SubmissionDetail = lazy(() => import('./pages/admin/SubmissionDetail'));
+const WalkInSubmission = lazy(() => import('./pages/admin/WalkInSubmission'));
 
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Forbidden = lazy(() => import('./pages/Forbidden'));
@@ -62,6 +64,8 @@ function App() {
                     <Route path="settings" element={<Settings />} />
                     <Route path="profile" element={<Profile />} />
                     <Route path="submissions" element={<Submissions />} />
+                    <Route path="submissions/new" element={<WalkInSubmission />} />
+                    <Route path="submissions/:id" element={<SubmissionDetail />} />
                   </Route>
                 </Route>
 

@@ -1,19 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, RefreshCw, CheckCircle2, Clock, XCircle, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Search,
+  Filter,
+  RefreshCw,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  FileText,
+  Plus,
+  Eye,
+  FileCheck2
+} from 'lucide-react';
 import submissionAPI from '../../services/submissionAPI';
+import { useAuth } from '../../contexts/AuthContext';
 import { Skeleton } from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import Alert from '../../components/Alert';
 import ConfirmModal from '../../components/ConfirmModal';
 
 export default function Submissions() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [alert, setAlert] = useState(null);
 
-  // State Modal Detail & Update Status
+  // State Modal Cepat Update Status
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [actionType, setActionType] = useState('diproses'); // 'diproses' | 'selesai' | 'ditolak'
@@ -43,7 +59,8 @@ export default function Submissions() {
     fetchSubmissions();
   };
 
-  const handleOpenAction = (item, type) => {
+  const handleOpenAction = (item, type, e) => {
+    e.stopPropagation();
     setSelectedItem(item);
     setActionType(type);
     setNotes(type === 'ditolak' ? 'Persyaratan dokumen kurang lengkap / tidak valid.' : 'Dokumen sedang diproses.');
@@ -54,7 +71,10 @@ export default function Submissions() {
     if (!selectedItem) return;
     setUpdating(true);
     try {
-      await submissionAPI.updateStatus(selectedItem.id, actionType, notes);
+      await submissionAPI.updateStatus(selectedItem.id, actionType, notes, {
+        adminId: user?.id || user?.nip || 'admin',
+        adminName: user?.name || 'Petugas Verifikator'
+      });
       setAlert({
         type: 'success',
         message: `Status permohonan ${selectedItem.trackingCode} berhasil diubah menjadi ${actionType.toUpperCase()}.`
@@ -105,26 +125,37 @@ export default function Submissions() {
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
+      {/* Top Header & New Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
             Permohonan Surat Masuk
           </h2>
           <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">
-            Daftar pengajuan surat dari masyarakat yang memerlukan verifikasi dan persetujuan.
+            Daftar pengajuan surat dari masyarakat yang memerlukan verifikasi kelengkapan dan penerbitan nomor surat resmi.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={fetchSubmissions}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-800 transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Segarkan Data</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => navigate('/admin/submissions/new')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Permohonan Baru (Walk-in)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={fetchSubmissions}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-800 transition-colors shadow-xs cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Segarkan</span>
+          </button>
+        </div>
       </div>
 
       {/* Alert Notifikasi */}
@@ -198,6 +229,7 @@ export default function Submissions() {
                   <th className="px-4 py-3">Kode Tracking</th>
                   <th className="px-4 py-3">Pemohon & NIK</th>
                   <th className="px-4 py-3">Jenis Surat</th>
+                  <th className="px-4 py-3">Sumber</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Tanggal Masuk</th>
                   <th className="px-4 py-3 text-right">Aksi Verifikasi</th>
@@ -205,16 +237,40 @@ export default function Submissions() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-neutral-800/60">
                 {submissions.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-neutral-800/30 transition-colors">
+                  <tr
+                    key={item.id}
+                    onClick={() => navigate(`/admin/submissions/${item.id}`)}
+                    className="hover:bg-slate-50 dark:hover:bg-neutral-800/40 transition-colors cursor-pointer group"
+                  >
                     <td className="px-4 py-3.5 font-mono font-bold text-red-700 dark:text-red-400">
                       {item.trackingCode}
                     </td>
                     <td className="px-4 py-3.5">
-                      <p className="font-semibold text-slate-900 dark:text-white">{item.nama}</p>
-                      <p className="text-[11px] font-mono text-slate-400 dark:text-neutral-500">{item.nik}</p>
+                      <p className="font-semibold text-slate-900 dark:text-white group-hover:text-red-700 dark:group-hover:text-red-400 transition-colors">
+                        {item.nama}
+                      </p>
+                      <p className="text-[11px] font-mono text-slate-400 dark:text-neutral-500">
+                        {item.nik}
+                      </p>
                     </td>
                     <td className="px-4 py-3.5 text-slate-700 dark:text-neutral-300">
-                      {item.jenisSurat}
+                      <div>{item.jenisSurat}</div>
+                      {item.nomorSurat && (
+                        <div className="text-[10px] font-mono text-slate-400">
+                          No: {item.nomorSurat}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      {item.source === 'walk-in' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900/40">
+                          Loket
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-neutral-800 text-slate-600 dark:text-neutral-400">
+                          Online
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3.5">
                       {getStatusBadge(item.status)}
@@ -227,12 +283,20 @@ export default function Submissions() {
                       })}
                     </td>
                     <td className="px-4 py-3.5 text-right">
-                      <div className="inline-flex items-center gap-1.5">
+                      <div className="inline-flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/admin/submissions/${item.id}`)}
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-200 rounded font-semibold text-[11px] transition-colors inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>Detail</span>
+                        </button>
                         {item.status === 'pending' && (
                           <button
                             type="button"
-                            onClick={() => handleOpenAction(item, 'diproses')}
-                            className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded font-semibold text-[11px] transition-colors"
+                            onClick={(e) => handleOpenAction(item, 'diproses', e)}
+                            className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded font-semibold text-[11px] transition-colors cursor-pointer"
                           >
                             Proses
                           </button>
@@ -240,17 +304,18 @@ export default function Submissions() {
                         {item.status === 'diproses' && (
                           <button
                             type="button"
-                            onClick={() => handleOpenAction(item, 'selesai')}
-                            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded font-semibold text-[11px] transition-colors"
+                            onClick={() => navigate(`/admin/submissions/${item.id}`)}
+                            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded font-semibold text-[11px] transition-colors inline-flex items-center gap-1 cursor-pointer"
                           >
-                            Setujui
+                            <FileCheck2 className="w-3 h-3" />
+                            <span>Verifikasi</span>
                           </button>
                         )}
                         {item.status !== 'ditolak' && item.status !== 'selesai' && (
                           <button
                             type="button"
-                            onClick={() => handleOpenAction(item, 'ditolak')}
-                            className="px-2.5 py-1 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 rounded font-semibold text-[11px] transition-colors"
+                            onClick={(e) => handleOpenAction(item, 'ditolak', e)}
+                            className="px-2.5 py-1 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 rounded font-semibold text-[11px] transition-colors cursor-pointer"
                           >
                             Tolak
                           </button>
@@ -265,7 +330,7 @@ export default function Submissions() {
         )}
       </div>
 
-      {/* Modal Dialog Konfirmasi Perubahan Status */}
+      {/* Modal Dialog Konfirmasi Perubahan Status Cepat */}
       <ConfirmModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}

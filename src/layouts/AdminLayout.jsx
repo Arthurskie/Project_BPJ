@@ -1,20 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
-import { Menu, Bell, UserCircle, LogOut, User, Settings } from 'lucide-react';
+import { Menu, LogOut, User, Settings, ExternalLink, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  // Default sidebar closed on mobile, open on desktop
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const notificationRef = useRef(null);
-  const profileRef = useRef(null);
   const location = useLocation();
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileRef = useRef(null);
 
   const handleSignOut = async () => {
     setShowProfileMenu(false);
@@ -22,17 +19,15 @@ export default function AdminLayout() {
     navigate('/login');
   };
 
-  // Close sidebar on route change (mobile only)
+  // Close sidebar & dropdown on mobile route change
   useEffect(() => {
     if (window.innerWidth < 1024) {
       setIsSidebarOpen(false);
     }
-    // Also close dropdowns on navigation
-    setShowNotifications(false);
     setShowProfileMenu(false);
   }, [location.pathname]);
 
-  // Handle window resize — open sidebar on desktop, close on mobile
+  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
@@ -43,132 +38,123 @@ export default function AdminLayout() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Close notifications dropdown when clicking outside
+  // Close profile dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setShowNotifications(false);
-      }
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setShowProfileMenu(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
-  const notifications = [
-    { id: 1, text: "New submission on 'Customer Survey'", time: "2m ago", read: false },
-    { id: 2, text: "Your form 'Event Registration' reached 500 responses", time: "1h ago", read: false },
-    { id: 3, text: "System maintenance scheduled for tonight", time: "3h ago", read: true },
-  ];
-
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-black transition-colors duration-300">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-neutral-950 text-slate-900 dark:text-neutral-100 font-sans">
       {/* Sidebar */}
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 w-full min-w-0 overflow-hidden">
         {/* Top Navbar */}
-        <header className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-neutral-800 bg-white dark:bg-black z-10 sticky top-0 shadow-sm transition-colors duration-300">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            <button 
+        <header className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16 border-b border-slate-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 z-10 sticky top-0 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-neutral-900 transition-colors shrink-0"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              aria-label="Toggle menu navigasi"
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
-            <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
-              Form System Admin
-            </h1>
+
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-white truncate">
+                Panel Pelayanan e-Surat
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            {/* Notifications */}
-            <div className="relative" ref={notificationRef}>
-              <button 
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-neutral-900 transition-colors relative group"
-              >
-                <Bell size={20} />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-primary-600 rounded-full border-2 border-white transition-colors"></span>
-              </button>
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Tautan Cepat ke Portal Publik */}
+            <Link
+              to="/guest"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden md:inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-neutral-400 hover:text-red-700 dark:hover:text-red-400 px-2.5 py-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-neutral-800 transition-colors"
+              title="Buka portal permohonan warga di tab baru"
+            >
+              <span>Portal Warga</span>
+              <ExternalLink size={13} />
+            </Link>
 
-              {/* Dropdown — full-width on mobile, fixed-width on desktop */}
-              {showNotifications && (
-                <div className="fixed sm:absolute left-0 sm:left-auto right-0 sm:right-0 top-[calc(100%+0.5rem)] sm:top-auto sm:mt-2 w-full sm:w-80 bg-white dark:bg-black rounded-none sm:rounded-lg shadow-lg border-y sm:border border-slate-200 dark:border-neutral-800 overflow-hidden sm:origin-top-right animate-dropdown z-50 max-h-[80vh] overflow-y-auto">
-                  <div className="p-4 border-b border-slate-100 dark:border-neutral-800 flex justify-between items-center bg-slate-50/50 dark:bg-neutral-900/50">
-                    <h3 className="font-semibold text-slate-800 dark:text-white">Notifications</h3>
-                    <button className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors duration-300">Mark all read</button>
-                  </div>
-                  <div className="max-h-80 overflow-y-auto">
-                    {notifications.map((notif) => (
-                      <div key={notif.id} className={`p-4 border-b border-slate-50 dark:border-neutral-800 hover:bg-slate-50/80 dark:hover:bg-neutral-900/80 transition-all duration-300 ease-in-out cursor-pointer flex gap-3 ${!notif.read ? 'bg-blue-50/30 dark:bg-primary-900/20' : ''}`}>
-                        <div className={`w-2 h-2 rounded-full mt-2 shrink-0 transition-all duration-500 ${!notif.read ? 'bg-primary-500 scale-100' : 'bg-transparent scale-0'}`}></div>
-                        <div>
-                          <p className={`text-sm transition-colors duration-300 ${!notif.read ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-600 dark:text-neutral-400'}`}>{notif.text}</p>
-                          <p className="text-xs text-slate-400 dark:text-neutral-500 mt-1">{notif.time}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="p-3 text-center border-t border-slate-100 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/50 hover:bg-slate-100 dark:hover:bg-neutral-900 transition-colors duration-300 cursor-pointer">
-                    <span className="text-sm font-medium text-primary-600 dark:text-primary-400">View all notifications</span>
-                  </div>
-                </div>
-              )}
-            </div>
+            <div className="h-4 w-px bg-slate-200 dark:border-neutral-800 hidden md:block" />
 
+            {/* Profile Menu Trigger */}
             <div className="relative" ref={profileRef}>
-              <div 
-                className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-slate-200 dark:border-neutral-800 cursor-pointer group"
+              <button
+                type="button"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center gap-2.5 p-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer text-left"
               >
-                <UserCircle size={28} className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
-                <div className="hidden md:block text-sm">
-                  <div className="flex items-center gap-1.5">
-                    <p className="font-semibold text-slate-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                      {user?.name || 'Petugas'}
-                    </p>
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 uppercase">
-                      {user?.role === 'super_admin' ? 'Super Admin' : 'Verifikator'}
-                    </span>
-                  </div>
-                  <p className="text-slate-500 dark:text-neutral-400 text-xs">{user?.email || 'admin@portal.go.id'}</p>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-700 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'P'}
                 </div>
-              </div>
+                <div className="hidden sm:block text-left leading-tight">
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white truncate max-w-[140px]">
+                    {user?.name || 'Petugas'}
+                  </p>
+                  <p className="text-[10px] text-slate-400 dark:text-neutral-500 font-mono">
+                    {user?.nip ? user.nip.slice(0, 10) + '...' : 'Petugas Dinas'}
+                  </p>
+                </div>
+              </button>
 
               {/* Profile Dropdown */}
               {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-black rounded-lg shadow-lg border border-slate-200 dark:border-neutral-800 overflow-hidden origin-top-right animate-dropdown z-50">
-                  <div className="py-1">
-                    {/* Show name on mobile since it's hidden in the header */}
-                    <div className="md:hidden px-4 py-2 border-b border-slate-100 dark:border-neutral-800">
-                      <p className="font-semibold text-sm text-slate-900 dark:text-white">{user?.name || 'Petugas'}</p>
-                      <p className="text-xs text-slate-500 dark:text-neutral-400">{user?.email || 'admin@portal.go.id'}</p>
-                      <span className="inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 uppercase">
-                        {user?.role === 'super_admin' ? 'Super Admin' : 'Verifikator'}
-                      </span>
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-slate-200 dark:border-neutral-800 overflow-hidden origin-top-right animate-dropdown z-50 py-1.5 text-xs">
+                  <div className="px-3.5 py-2.5 border-b border-slate-100 dark:border-neutral-800">
+                    <p className="font-semibold text-slate-900 dark:text-white truncate">
+                      {user?.name || 'Petugas'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 dark:text-neutral-500 truncate mt-0.5">
+                      {user?.email || 'admin@kelurahan.go.id'}
+                    </p>
+                    <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/50 px-2 py-0.5 rounded">
+                      <ShieldCheck size={11} />
+                      <span>{user?.role === 'super_admin' ? 'Super Admin' : 'Verifikator Loket'}</span>
                     </div>
-                    <Link to="/profile" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-neutral-900 hover:text-slate-900 dark:hover:text-white transition-colors" onClick={() => setShowProfileMenu(false)}>
-                      <User size={16} />
-                      My Profile
-                    </Link>
-                    <Link to="/settings" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-neutral-900 hover:text-slate-900 dark:hover:text-white transition-colors" onClick={() => setShowProfileMenu(false)}>
-                      <Settings size={16} />
-                      Settings
-                    </Link>
-                    <div className="border-t border-slate-100 dark:border-neutral-800 my-1"></div>
-                    <button 
-                      type="button"
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-left cursor-pointer" 
-                      onClick={handleSignOut}
+                  </div>
+
+                  <div className="py-1">
+                    <Link
+                      to="/admin/profile"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2.5 px-3.5 py-2 text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-neutral-800/60 hover:text-slate-900 dark:hover:text-white transition-colors"
                     >
-                      <LogOut size={16} />
-                      Keluar (Sign Out)
+                      <User size={14} className="text-slate-400" />
+                      <span>Profil Saya</span>
+                    </Link>
+                    <Link
+                      to="/admin/settings"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2.5 px-3.5 py-2 text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-neutral-800/60 hover:text-slate-900 dark:hover:text-white transition-colors"
+                    >
+                      <Settings size={14} className="text-slate-400" />
+                      <span>Pengaturan Sistem</span>
+                    </Link>
+                  </div>
+
+                  <div className="border-t border-slate-100 dark:border-neutral-800 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors text-left cursor-pointer font-medium"
+                    >
+                      <LogOut size={14} />
+                      <span>Keluar (Logout)</span>
                     </button>
                   </div>
                 </div>
@@ -177,9 +163,9 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 dark:bg-black transition-colors duration-300">
-          <div className="p-4 sm:p-6 md:p-8">
+        {/* Page Content Container */}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 dark:bg-neutral-950">
+          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
             <Outlet />
           </div>
         </main>

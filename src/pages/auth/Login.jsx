@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react';
@@ -6,7 +6,7 @@ import { Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react';
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,7 +15,17 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const from = location.state?.from?.pathname || '/';
+  // Jika ada path asal dari ProtectedRoute (misal /admin/submissions), gunakan itu.
+  // Jika tidak ada atau berasal dari root/guest, arahkan langsung ke Dashboard Admin (/admin).
+  const fromPath = location.state?.from?.pathname;
+  const redirectTarget = fromPath && fromPath !== '/' && fromPath !== '/guest' ? fromPath : '/admin';
+
+  // Jika user sudah memiliki sesi login aktif, langsung arahkan ke Dashboard Admin
+  useEffect(() => {
+    if (user) {
+      navigate(redirectTarget, { replace: true });
+    }
+  }, [user, navigate, redirectTarget]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,7 +40,7 @@ export default function Login() {
 
     try {
       await login(email, password);
-      navigate(from, { replace: true });
+      navigate(redirectTarget, { replace: true });
     } catch (err) {
       setErrorMsg(err.message || 'Kredensial yang dimasukkan tidak cocok. Silakan periksa kembali.');
     } finally {
