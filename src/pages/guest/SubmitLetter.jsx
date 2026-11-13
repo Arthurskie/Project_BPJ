@@ -8,18 +8,23 @@ import {
   CheckCircle2,
   Printer,
   ShieldCheck,
-  QrCode
+  QrCode,
+  Search,
+  AlertCircle
 } from 'lucide-react';
 import GuestNavbar from '../../components/GuestNavbar';
 import { GarudaLogo } from '../../components/IndonesiaSeal';
-import heroBg from '../../assets/hero-bg.png';
+import heroBg from '../../assets/hero-bg.jpg';
+import submissionAPI from '../../services/submissionAPI';
 
 const SubmitLetter = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const [formData, setFormData] = useState({
+    nik: '',
     nama: '',
     email: '',
     telepon: '',
@@ -29,19 +34,25 @@ const SubmitLetter = () => {
     keterangan: '',
   });
 
+  const [selectedFile, setSelectedFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState('');
   const [registrationData, setRegistrationData] = useState(null);
   const fileInputRef = useRef(null);
-  const nameInputRef = useRef(null);
+  const nikInputRef = useRef(null);
 
   useEffect(() => {
-    if (!isSuccess && nameInputRef.current) nameInputRef.current.focus();
+    if (!isSuccess && nikInputRef.current) nikInputRef.current.focus();
     if (isSuccess) window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [isSuccess]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // Khusus NIK hanya angka
+    if (name === 'nik') {
+      setFormData((prev) => ({ ...prev, [name]: value.replace(/\D/g, '').slice(0, 16) }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -52,48 +63,77 @@ const SubmitLetter = () => {
       alert('Ukuran berkas melebihi batas maksimal 10 MB.');
       return;
     }
+    setSelectedFile(file);
     setFileName(file.name);
     setFileSize((file.size / (1024 * 1024)).toFixed(2) + ' MB');
   };
 
   const clearFile = () => {
+    setSelectedFile(null);
     setFileName('');
     setFileSize('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMsg('');
+
+    if (formData.nik.length !== 16) {
+      setErrorMsg('NIK harus terdiri dari 16 digit angka.');
+      return;
+    }
+
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const payload = new FormData();
+      payload.append('nik', formData.nik);
+      payload.append('nama_lengkap', formData.nama);
+      payload.append('email', formData.email || '');
+      payload.append('telepon', formData.telepon || '');
+      payload.append('instansi', formData.instansi || '');
+      payload.append('jenis_surat', formData.jenisSurat);
+      payload.append('perihal', formData.perihal);
+      payload.append('keterangan', formData.keterangan || '');
+      if (selectedFile) {
+        payload.append('lampiran', selectedFile);
+      }
+
+      const res = await submissionAPI.submitLetter(payload);
 
       const now = new Date();
-      const num = Math.floor(1000 + Math.random() * 9000);
-      const nomorReg = `REG/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${num}`;
       const waktu = new Intl.DateTimeFormat('id-ID', {
         dateStyle: 'full',
         timeStyle: 'short',
       }).format(now) + ' WIB';
 
       setRegistrationData({
-        nomorReg,
+        nomorReg: res.data?.trackingCode || `SRT-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-001`,
         waktu,
         ...formData,
         fileName,
         fileSize,
       });
+
       setIsSuccess(true);
-    }, 1200);
+    } catch (err) {
+      console.error('[Submit Error]:', err);
+      setErrorMsg(err.message || 'Gagal mengirimkan permohonan surat. Silakan coba lagi.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleReset = () => {
     setIsSuccess(false);
     setRegistrationData(null);
+    setSelectedFile(null);
     setFileName('');
     setFileSize('');
+    setErrorMsg('');
     setFormData({
+      nik: '',
       nama: '',
       email: '',
       telepon: '',
@@ -122,7 +162,7 @@ const SubmitLetter = () => {
             Formulir Pengajuan Surat
           </h1>
           <p className="text-sm text-slate-300 max-w-lg mx-auto">
-            Lengkapi data di bawah untuk mendaftarkan permohonan Anda.
+            Pelayanan persuratan online masyarakat tanpa perlu registrasi akun. Cukup isi NIK dan identitas resmi.
           </p>
         </div>
       </section>
@@ -131,7 +171,7 @@ const SubmitLetter = () => {
       <main className="flex-1 pb-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20">
 
-          {/* ── Success ── */}
+          {/* ── Success / Tanda Terima ── */}
           {isSuccess && registrationData ? (
             <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-sm overflow-hidden animate-fade-in print-only-container">
 
@@ -139,14 +179,14 @@ const SubmitLetter = () => {
               <div className="no-print bg-emerald-600 text-white px-6 py-3.5 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <CheckCircle2 size={18} />
-                  <span className="text-sm font-semibold">Pengajuan berhasil didaftarkan</span>
+                  <span className="text-sm font-semibold">Pengajuan berhasil teregistrasi secara elektronik</span>
                 </div>
                 <button
                   onClick={() => window.print()}
                   className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white text-emerald-800 rounded-md"
                 >
                   <Printer size={13} />
-                  Cetak
+                  Cetak Tanda Terima
                 </button>
               </div>
 
@@ -164,10 +204,10 @@ const SubmitLetter = () => {
                   </p>
                 </div>
 
-                {/* Nomor registrasi */}
+                {/* Nomor registrasi / Kode Tracking */}
                 <div className="text-center mb-5 sm:mb-6">
-                  <p className="text-[11px] sm:text-xs text-slate-500 mb-0.5 sm:mb-1">Nomor Registrasi</p>
-                  <p className="text-lg sm:text-xl font-bold text-red-700 font-mono tracking-wide">{registrationData.nomorReg}</p>
+                  <p className="text-[11px] sm:text-xs text-slate-500 mb-0.5 sm:mb-1">Kode Tracking / Nomor Tiket</p>
+                  <p className="text-xl sm:text-2xl font-bold text-red-700 font-mono tracking-wide">{registrationData.nomorReg}</p>
                   <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1">{registrationData.waktu}</p>
                 </div>
 
@@ -179,9 +219,9 @@ const SubmitLetter = () => {
                   <div className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
                     <p className="font-semibold text-slate-800 flex items-center gap-1 mb-0.5">
                       <ShieldCheck size={13} className="text-emerald-600 shrink-0" />
-                      Teregistrasi Secara Elektronik
+                      Teregistrasi di Database Resmi
                     </p>
-                    Simpan nomor registrasi ini untuk melacak status dokumen Anda melalui portal.
+                    Gunakan kombinasi <strong>NIK ({registrationData.nik})</strong> dan <strong>Kode Tracking ({registrationData.nomorReg})</strong> untuk melacak status dokumen Anda secara real-time.
                   </div>
                 </div>
 
@@ -190,14 +230,16 @@ const SubmitLetter = () => {
                   <table className="w-full text-[11px] sm:text-xs">
                     <tbody>
                       {[
-                        ['Nama Pemohon', registrationData.nama],
-                        ['Email', registrationData.email],
+                        ['NIK Pemohon', registrationData.nik],
+                        ['Nama Lengkap', registrationData.nama],
+                        ['Email', registrationData.email || '-'],
                         ['Telepon', registrationData.telepon || '-'],
                         ['Asal Instansi', registrationData.instansi || '-'],
                         ['Jenis Surat', registrationData.jenisSurat],
                         ['Perihal', registrationData.perihal],
-                        ['Lampiran', `${registrationData.fileName} (${registrationData.fileSize})`],
-                        ['Estimasi Verifikasi', '1×24 jam kerja'],
+                        ['Lampiran Berkas', registrationData.fileName ? `${registrationData.fileName} (${registrationData.fileSize})` : 'Tidak ada lampiran'],
+                        ['Status Pengajuan', 'Menunggu Verifikasi (Pending)'],
+                        ['Estimasi Layanan', '1×24 jam kerja'],
                       ].map(([label, value], i) => (
                         <tr key={i} className="border-b border-slate-200 last:border-b-0">
                           <td className="w-2/5 sm:w-1/3 px-3 py-2 sm:px-4 sm:py-2.5 bg-slate-50 font-semibold text-slate-700">{label}</td>
@@ -212,9 +254,9 @@ const SubmitLetter = () => {
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] sm:text-xs text-amber-900">
                   <p className="font-semibold mb-1">Langkah selanjutnya:</p>
                   <ol className="list-decimal pl-4 space-y-0.5 text-slate-700">
-                    <li>Simpan atau cetak tanda terima ini.</li>
-                    <li>Pantau status melalui menu <strong>Lacak Status</strong> di halaman utama.</li>
-                    <li>Surat balasan akan dikirim ke email: <strong>{registrationData.email}</strong></li>
+                    <li>Simpan Kode Tracking <strong>{registrationData.nomorReg}</strong>.</li>
+                    <li>Pantau status melalui menu <strong>Lacak Status</strong> dengan memasukkan NIK & Kode Tracking.</li>
+                    <li>Surat balasan atau pemberitahuan akan dikirim ke email: <strong>{registrationData.email || 'Email Anda'}</strong>.</li>
                   </ol>
                 </div>
 
@@ -229,6 +271,13 @@ const SubmitLetter = () => {
                   ← Kembali ke Beranda
                 </button>
                 <div className="flex gap-2 w-full sm:w-auto">
+                  <Link
+                    to="/guest/track"
+                    className="flex-1 sm:flex-none px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-700 dark:text-white bg-white dark:bg-neutral-700 border border-slate-300 dark:border-neutral-600 rounded-lg hover:bg-slate-50 active:scale-[0.98] transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Search size={14} />
+                    Lacak Status
+                  </Link>
                   <button
                     onClick={() => window.print()}
                     className="flex-1 sm:flex-none px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-700 dark:text-white bg-white dark:bg-neutral-700 border border-slate-300 dark:border-neutral-600 rounded-lg hover:bg-slate-50 active:scale-[0.98] transition-colors flex items-center justify-center gap-1.5"
@@ -248,28 +297,53 @@ const SubmitLetter = () => {
 
             </div>
           ) : (
-            /* ── Form ── */
+            /* ── Form Pengajuan ── */
             <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-sm overflow-hidden animate-fade-in">
 
               {/* Form header */}
               <div className="px-4 sm:px-8 pt-5 sm:pt-7 pb-4 sm:pb-5 border-b border-slate-100 dark:border-neutral-800">
-                <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white mb-0.5 sm:mb-1">Detail Pengajuan</h2>
+                <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white mb-0.5 sm:mb-1">
+                  Detail Pengajuan Surat
+                </h2>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-neutral-400">
-                  Kolom bertanda <span className="text-red-500 font-medium">*</span> wajib diisi.
+                  Kolom bertanda <span className="text-red-500 font-medium">*</span> wajib diisi dengan benar.
                 </p>
               </div>
+
+              {errorMsg && (
+                <div className="mx-4 sm:mx-8 mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
+                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit}>
                 <div className="px-4 sm:px-8 py-5 sm:py-6 space-y-4 sm:space-y-5">
 
-                  {/* Nama & Email */}
+                  {/* NIK (Wajib 16 digit) & Nama Lengkap */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="nik" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
+                        Nomor Induk Kependudukan (NIK) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        ref={nikInputRef}
+                        id="nik"
+                        name="nik"
+                        type="text"
+                        maxLength={16}
+                        required
+                        value={formData.nik}
+                        onChange={handleChange}
+                        className={inputClass}
+                        placeholder="16 digit angka sesuai KTP"
+                      />
+                    </div>
                     <div>
                       <label htmlFor="nama" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
                         Nama Lengkap <span className="text-red-500">*</span>
                       </label>
                       <input
-                        ref={nameInputRef}
                         id="nama"
                         name="nama"
                         type="text"
@@ -277,12 +351,16 @@ const SubmitLetter = () => {
                         value={formData.nama}
                         onChange={handleChange}
                         className={inputClass}
-                        placeholder="Nama sesuai identitas"
+                        placeholder="Nama lengkap pemohon"
                       />
                     </div>
+                  </div>
+
+                  {/* Email & Telepon */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
-                        Email <span className="text-red-500">*</span>
+                        Alamat Email <span className="text-red-500">*</span>
                       </label>
                       <input
                         id="email"
@@ -295,13 +373,9 @@ const SubmitLetter = () => {
                         placeholder="nama@email.com"
                       />
                     </div>
-                  </div>
-
-                  {/* Telepon & Instansi */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="telepon" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
-                        Nomor Telepon
+                        Nomor WhatsApp / HP
                       </label>
                       <input
                         id="telepon"
@@ -310,12 +384,16 @@ const SubmitLetter = () => {
                         value={formData.telepon}
                         onChange={handleChange}
                         className={inputClass}
-                        placeholder="08xx-xxxx-xxxx"
+                        placeholder="08xxxxxxxxxx"
                       />
                     </div>
+                  </div>
+
+                  {/* Asal Instansi & Jenis Surat */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="instansi" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
-                        Asal Instansi / Lembaga
+                        Asal Instansi / Universitas <span className="text-slate-400 font-normal">(opsional)</span>
                       </label>
                       <input
                         id="instansi"
@@ -324,36 +402,34 @@ const SubmitLetter = () => {
                         value={formData.instansi}
                         onChange={handleChange}
                         className={inputClass}
-                        placeholder="Nama instansi (opsional)"
+                        placeholder="Contoh: Universitas Indonesia"
                       />
                     </div>
-                  </div>
-
-                  {/* Jenis Surat */}
-                  <div>
-                    <label htmlFor="jenisSurat" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
-                      Jenis Surat <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      id="jenisSurat"
-                      name="jenisSurat"
-                      value={formData.jenisSurat}
-                      onChange={handleChange}
-                      className={inputClass}
-                      required
-                    >
-                      <option value="Permohonan Audiensi">Permohonan Audiensi</option>
-                      <option value="Izin Penelitian / Magang">Izin Penelitian / Magang</option>
-                      <option value="Surat Keterangan / Rekomendasi">Surat Keterangan / Rekomendasi</option>
-                      <option value="Undangan Kedinasan">Undangan Kedinasan</option>
-                      <option value="Surat Masuk Lainnya">Surat Masuk Lainnya</option>
-                    </select>
+                    <div>
+                      <label htmlFor="jenisSurat" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
+                        Jenis Surat <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        id="jenisSurat"
+                        name="jenisSurat"
+                        value={formData.jenisSurat}
+                        onChange={handleChange}
+                        className={inputClass}
+                        required
+                      >
+                        <option value="Permohonan Audiensi">Permohonan Audiensi</option>
+                        <option value="Izin Penelitian / Magang">Izin Penelitian / Magang (PKL)</option>
+                        <option value="Surat Keterangan / Rekomendasi">Surat Keterangan / Rekomendasi</option>
+                        <option value="Undangan Kedinasan">Undangan Kedinasan</option>
+                        <option value="Surat Masuk Lainnya">Surat Masuk Lainnya</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* Perihal */}
                   <div>
                     <label htmlFor="perihal" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
-                      Perihal <span className="text-red-500">*</span>
+                      Perihal Surat <span className="text-red-500">*</span>
                     </label>
                     <input
                       id="perihal"
@@ -363,14 +439,14 @@ const SubmitLetter = () => {
                       value={formData.perihal}
                       onChange={handleChange}
                       className={inputClass}
-                      placeholder="Contoh: Permohonan Cuti Tahunan"
+                      placeholder="Contoh: Permohonan Izin Riset Skripsi"
                     />
                   </div>
 
-                  {/* File */}
+                  {/* File Lampiran */}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
-                      Lampiran Dokumen <span className="text-red-500">*</span>
+                      Lampiran Berkas Persyaratan <span className="text-slate-400 font-normal">(PDF / DOCX, maks. 10MB)</span>
                     </label>
                     {fileName ? (
                       <div className="flex items-center justify-between px-4 py-3 border border-red-200 dark:border-red-900/40 rounded-lg bg-red-50 dark:bg-red-950/20">
@@ -394,16 +470,16 @@ const SubmitLetter = () => {
                     ) : (
                       <div
                         onClick={() => fileInputRef.current?.click()}
-                        className="group border-2 border-dashed border-slate-200 dark:border-neutral-700 rounded-lg px-4 py-8 text-center cursor-pointer hover:border-red-400 dark:hover:border-red-500/40 hover:bg-red-50/50 dark:hover:bg-red-950/10 transition-all"
+                        className="group border-2 border-dashed border-slate-200 dark:border-neutral-700 rounded-lg px-4 py-7 text-center cursor-pointer hover:border-red-400 dark:hover:border-red-500/40 hover:bg-red-50/50 dark:hover:bg-red-950/10 transition-all"
                       >
-                        <div className="w-10 h-10 mx-auto mb-3 rounded-lg bg-slate-100 dark:bg-neutral-800 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 flex items-center justify-center transition-colors">
+                        <div className="w-10 h-10 mx-auto mb-2.5 rounded-lg bg-slate-100 dark:bg-neutral-800 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 flex items-center justify-center transition-colors">
                           <Upload size={18} className="text-slate-400 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
                         </div>
                         <p className="text-sm font-medium text-slate-600 dark:text-neutral-400 group-hover:text-red-700 dark:group-hover:text-red-300 transition-colors">
-                          Klik untuk memilih file
+                          Pilih berkas lampiran pendukung
                         </p>
                         <p className="text-xs text-slate-400 mt-1">
-                          PDF, DOC, DOCX — Maks. 10 MB
+                          Format: PDF, DOC, DOCX — Maksimal 10 MB
                         </p>
                       </div>
                     )}
@@ -412,15 +488,14 @@ const SubmitLetter = () => {
                       type="file"
                       className="hidden"
                       accept=".pdf,.doc,.docx"
-                      required={!fileName}
                       onChange={handleFileChange}
                     />
                   </div>
 
-                  {/* Keterangan */}
+                  {/* Catatan / Keterangan */}
                   <div>
                     <label htmlFor="keterangan" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
-                      Catatan <span className="text-slate-400 font-normal">(opsional)</span>
+                      Catatan / Keterangan Tambahan <span className="text-slate-400 font-normal">(opsional)</span>
                     </label>
                     <textarea
                       id="keterangan"
@@ -429,7 +504,7 @@ const SubmitLetter = () => {
                       value={formData.keterangan}
                       onChange={handleChange}
                       className={inputClass}
-                      placeholder="Informasi tambahan terkait pengajuan"
+                      placeholder="Tuliskan catatan khusus bila diperlukan"
                     />
                   </div>
 
@@ -447,19 +522,16 @@ const SubmitLetter = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-2.5 text-xs sm:text-sm font-semibold text-white bg-red-700 hover:bg-red-800 active:scale-[0.98] rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-2.5 text-xs sm:text-sm font-semibold text-white bg-red-700 hover:bg-red-800 active:scale-[0.98] rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
                   >
                     {isSubmitting ? (
                       <>
-                        <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Mengirim...
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Mendaftarkan Permohonan...</span>
                       </>
                     ) : (
                       <>
-                        Kirim Pengajuan
+                        <span>Kirim Permohonan Surat</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                       </>
                     )}
@@ -478,7 +550,8 @@ const SubmitLetter = () => {
           <p>&copy; {new Date().getFullYear()} Sistem Administrasi Terpadu</p>
           <div className="flex gap-4">
             <Link to="/guest" className="hover:text-slate-900 dark:hover:text-white transition-colors">Beranda</Link>
-            <Link to="/" className="hover:text-slate-900 dark:hover:text-white transition-colors">Portal Administrator</Link>
+            <Link to="/guest/track" className="hover:text-slate-900 dark:hover:text-white transition-colors">Cek Status</Link>
+            <Link to="/login" className="hover:text-slate-900 dark:hover:text-white transition-colors">Portal Petugas</Link>
           </div>
         </div>
       </footer>

@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import GuestNavbar from '../../components/GuestNavbar';
 import { GarudaLogo, FlagID } from '../../components/IndonesiaSeal';
-import heroBg from '../../assets/hero-bg.png';
 
 export default function LandingPage() {
   const [activeSection, setActiveSection] = useState('beranda');
@@ -59,10 +58,10 @@ export default function LandingPage() {
       window.history.scrollRestoration = 'manual';
     }
 
-    // Paksa ke paling atas (top: 0) saat dimuat / refresh
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (window.scrollY > 0) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
 
-    // Bersihkan hash dari URL jika ada saat refresh
     if (window.location.hash) {
       window.history.replaceState(null, '', window.location.pathname);
     }
@@ -75,13 +74,14 @@ export default function LandingPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
-  // Deteksi seksi aktif saat berada di tengah layar (viewport center) & status tombol Scroll-to-Top
+  // Deteksi seksi aktif secara non-blocking menggunakan requestAnimationFrame
   useEffect(() => {
-    const handleScroll = () => {
+    let ticking = false;
+
+    const computeActiveSection = () => {
       setShowScrollTop(window.scrollY > 300);
 
       const viewportCenter = window.scrollY + window.innerHeight / 2;
-
       const sections = ['beranda', 'layanan', 'prosedur', 'informasi'];
       let current = 'beranda';
       for (const id of sections) {
@@ -96,11 +96,27 @@ export default function LandingPage() {
         }
       }
       setActiveSection(current);
+      ticking = false;
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(computeActiveSection);
+        ticking = true;
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
+    
+    // Tunda penghitungan awal ke frame berikutnya agar tidak memblokir hydration awal
+    const timer = setTimeout(() => {
+      requestAnimationFrame(computeActiveSection);
+    }, 120);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleTrack = (e) => {
@@ -182,9 +198,17 @@ export default function LandingPage() {
           ref={heroRef}
           className="snap-section relative min-h-[calc(100dvh-68px)] lg:min-h-[calc(100vh-68px)] flex flex-col justify-center items-center overflow-hidden bg-slate-900 scroll-mt-[68px] pt-6 pb-10 sm:py-12"
         >
-          <div className="absolute inset-0">
-            <img src={heroBg} alt="" className="w-full h-full object-cover opacity-25" />
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/70 to-slate-900/90" />
+          {/* Latar Belakang Hero: 100% Pure CSS Tanpa Gambar Eksternal (LCP Instan) */}
+          <div className="absolute inset-0 bg-slate-950 overflow-hidden pointer-events-none">
+            <div
+              className="absolute inset-0 opacity-15"
+              style={{
+                backgroundImage: `radial-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px)`,
+                backgroundSize: '24px 24px'
+              }}
+            />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-red-700/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/60 via-transparent to-slate-950" />
           </div>
 
           <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center w-full">
@@ -488,7 +512,8 @@ export default function LandingPage() {
                   <ul className="space-y-2 text-xs">
                     <li><Link to="/guest" className="hover:text-white transition-colors py-1 inline-block">Beranda</Link></li>
                     <li><Link to="/guest/submit" className="hover:text-white transition-colors py-1 inline-block">Form Pengajuan</Link></li>
-                    <li><Link to="/" className="hover:text-white transition-colors py-1 inline-block">Portal Administrator</Link></li>
+                    <li><Link to="/guest/track" className="hover:text-white transition-colors py-1 inline-block">Cek Status Surat</Link></li>
+                    <li><Link to="/login" className="hover:text-white transition-colors py-1 inline-block">Portal Administrator</Link></li>
                   </ul>
                 </div>
 

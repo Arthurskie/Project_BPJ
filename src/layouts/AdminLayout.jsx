@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
-import { Menu, Bell, UserCircle, Check, LogOut, User, Settings } from 'lucide-react';
+import { Menu, Bell, UserCircle, LogOut, User, Settings } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function AdminLayout() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   // Default sidebar closed on mobile, open on desktop
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -11,6 +15,12 @@ export default function AdminLayout() {
   const notificationRef = useRef(null);
   const profileRef = useRef(null);
   const location = useLocation();
+
+  const handleSignOut = async () => {
+    setShowProfileMenu(false);
+    await logout();
+    navigate('/login');
+  };
 
   // Close sidebar on route change (mobile only)
   useEffect(() => {
@@ -119,19 +129,29 @@ export default function AdminLayout() {
               >
                 <UserCircle size={28} className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
                 <div className="hidden md:block text-sm">
-                  <p className="font-medium text-slate-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">Admin User</p>
-                  <p className="text-slate-500 dark:text-neutral-400 text-xs">admin@system.com</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-semibold text-slate-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                      {user?.name || 'Petugas'}
+                    </p>
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 uppercase">
+                      {user?.role === 'super_admin' ? 'Super Admin' : 'Verifikator'}
+                    </span>
+                  </div>
+                  <p className="text-slate-500 dark:text-neutral-400 text-xs">{user?.email || 'admin@portal.go.id'}</p>
                 </div>
               </div>
 
               {/* Profile Dropdown */}
               {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-black rounded-lg shadow-lg border border-slate-200 dark:border-neutral-800 overflow-hidden origin-top-right animate-dropdown z-50">
+                <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-black rounded-lg shadow-lg border border-slate-200 dark:border-neutral-800 overflow-hidden origin-top-right animate-dropdown z-50">
                   <div className="py-1">
                     {/* Show name on mobile since it's hidden in the header */}
                     <div className="md:hidden px-4 py-2 border-b border-slate-100 dark:border-neutral-800">
-                      <p className="font-medium text-sm text-slate-900 dark:text-white">Admin User</p>
-                      <p className="text-xs text-slate-500 dark:text-neutral-400">admin@system.com</p>
+                      <p className="font-semibold text-sm text-slate-900 dark:text-white">{user?.name || 'Petugas'}</p>
+                      <p className="text-xs text-slate-500 dark:text-neutral-400">{user?.email || 'admin@portal.go.id'}</p>
+                      <span className="inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 uppercase">
+                        {user?.role === 'super_admin' ? 'Super Admin' : 'Verifikator'}
+                      </span>
                     </div>
                     <Link to="/profile" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-neutral-900 hover:text-slate-900 dark:hover:text-white transition-colors" onClick={() => setShowProfileMenu(false)}>
                       <User size={16} />
@@ -142,9 +162,13 @@ export default function AdminLayout() {
                       Settings
                     </Link>
                     <div className="border-t border-slate-100 dark:border-neutral-800 my-1"></div>
-                    <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" onClick={() => setShowProfileMenu(false)}>
+                    <button 
+                      type="button"
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-left cursor-pointer" 
+                      onClick={handleSignOut}
+                    >
                       <LogOut size={16} />
-                      Sign out
+                      Keluar (Sign Out)
                     </button>
                   </div>
                 </div>

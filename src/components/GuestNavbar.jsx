@@ -30,45 +30,53 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
     return () => window.removeEventListener('nav-gliding', onNavGliding);
   }, []);
 
-  // Smart Sticky Scroll Listener (Auto Hide saat scroll ke bawah, Reveal saat scroll ke atas)
+  // Smart Sticky Scroll Listener (Optimasi non-blocking dengan requestAnimationFrame)
   useEffect(() => {
-    const onScroll = () => {
+    let ticking = false;
+
+    const computeNavVisibility = () => {
       const currentScrollY = window.scrollY;
 
-      // Jangan sembunyikan jika sedang dalam glide navigasi programmatic
       if (isProgrammaticScroll.current) {
         lastScrollY.current = currentScrollY;
+        ticking = false;
         return;
       }
 
-      // Selalu tampilkan saat berada di bagian paling atas halaman
       if (currentScrollY <= 20) {
         setNavVisible(true);
         setScrolled(false);
         lastScrollY.current = currentScrollY;
+        ticking = false;
         return;
       }
 
       setScrolled(true);
 
-      // Jangan auto-hide jika menu mobile sedang dibuka
       if (mobileOpen) {
         lastScrollY.current = currentScrollY;
+        ticking = false;
         return;
       }
 
       const diff = currentScrollY - lastScrollY.current;
-      if (Math.abs(diff) < 6) return;
-
-      if (diff > 0 && currentScrollY > 68) {
-        // Scroll ke bawah: meluncur ke atas (-translate-y-full)
-        setNavVisible(false);
-      } else if (diff < 0) {
-        // Scroll ke atas: meluncur kembali (translate-y-0)
-        setNavVisible(true);
+      if (Math.abs(diff) >= 6) {
+        if (diff > 0 && currentScrollY > 68) {
+          setNavVisible(false);
+        } else if (diff < 0) {
+          setNavVisible(true);
+        }
+        lastScrollY.current = currentScrollY;
       }
 
-      lastScrollY.current = currentScrollY;
+      ticking = false;
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(computeNavVisibility);
+        ticking = true;
+      }
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -189,7 +197,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                 Ajukan Surat
               </Link>
               <Link
-                to="/"
+                to="/login"
                 className="px-3 py-2 text-sm font-medium text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-neutral-800 active:scale-95 rounded-md flex items-center gap-1 transition-all"
               >
                 Masuk
@@ -285,7 +293,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                   Ajukan Surat Sekarang
                 </Link>
                 <Link
-                  to="/"
+                  to="/login"
                   onClick={() => setMobileOpen(false)}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-slate-700 dark:text-neutral-200 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 active:scale-[0.97] rounded-xl transition-colors"
                 >

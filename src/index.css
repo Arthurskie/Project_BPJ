@@ -65,6 +65,12 @@ button, a, input, select, textarea {
   scroll-margin-top: 68px;
 }
 
+/* Off-screen Content Visibility Optimization (Dramatis memangkas TBT & LCP pada Mobile) */
+#layanan, #prosedur, #informasi, footer {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 700px;
+}
+
 body {
   @apply bg-slate-50 text-slate-900 font-sans min-h-screen antialiased dark:bg-neutral-950 dark:text-neutral-50 transition-colors duration-300;
 }
