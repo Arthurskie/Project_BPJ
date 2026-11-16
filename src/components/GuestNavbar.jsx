@@ -13,7 +13,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
   const lastScrollY = useRef(0);
   const isProgrammaticScroll = useRef(false);
   const location = useLocation();
-  const isLanding = location.pathname === '/guest';
+  const isLanding = location.pathname === '/guest' || location.pathname === '/';
 
   // Sinkronisasi status navbar saat terjadi navigasi smooth glide
   useEffect(() => {
