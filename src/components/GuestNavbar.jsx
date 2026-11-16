@@ -84,8 +84,9 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
   }, [mobileOpen]);
 
   const handleNav = (e, id) => {
-    if (e) e.preventDefault();
+    if (e && (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) return;
     if (isLanding && onScrollToSection) {
+      e?.preventDefault();
       setMobileOpen(false);
       setNavVisible(true);
       isProgrammaticScroll.current = true;
@@ -98,6 +99,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
   };
 
   const handleLogoClick = (e) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     if (isLanding) {
       e.preventDefault();
       setMobileOpen(false);
@@ -167,7 +169,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                 return isLanding ? (
                   <a
                     key={item.id}
-                    href={`#${item.id}`}
+                    href="/guest"
                     onClick={(e) => handleNav(e, item.id)}
                     className={linkClass}
                   >
@@ -179,7 +181,8 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                 ) : (
                   <Link
                     key={item.id}
-                    to={`/guest#${item.id}`}
+                    to="/guest"
+                      state={{ section: item.id }}
                     className={linkClass}
                   >
                     {item.label}
@@ -258,7 +261,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                   return isLanding ? (
                     <a
                       key={item.id}
-                      href={`#${item.id}`}
+                      href="/guest"
                       onClick={(e) => handleNav(e, item.id)}
                       className={mobileLinkClass}
                     >
@@ -270,7 +273,8 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                   ) : (
                     <Link
                       key={item.id}
-                      to={`/guest#${item.id}`}
+                      to="/guest"
+                      state={{ section: item.id }}
                       onClick={() => setMobileOpen(false)}
                       className={mobileLinkClass}
                     >

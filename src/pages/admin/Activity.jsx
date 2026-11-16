@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { observeRequest } from '../../utils/observeRequest';
 import {
   History,
   Search,
@@ -22,29 +23,29 @@ const ACTION_FILTERS = [
 export default function Activity() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [actionFilter, setActionFilter] = useState('all');
+  const [actionFilter, updateFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  const fetchLogs = async () => {
+  const [request, setRequest] = useState({ action: 'all', search: '' });
+
+  const fetchLogs = () => {
     setLoading(true);
-    try {
-      const res = await auditLogAPI.getAuditLogs({
-        action: actionFilter,
-        search
-      });
-      if (res.success) {
-        setLogs(res.data);
-      }
-    } catch {
-      // Fallback
-    } finally {
-      setLoading(false);
-    }
+    setRequest({ action: actionFilter, search });
   };
 
-  useEffect(() => {
-    fetchLogs();
-  }, [actionFilter]);
+  const setActionFilter = (value, query = search) => {
+    updateFilter(value);
+    setLoading(true);
+    setRequest({ action: value, search: query });
+  };
+
+  useEffect(() => observeRequest(auditLogAPI.getAuditLogs(request), {
+    success: (res) => {
+      if (res.success) setLogs(res.data);
+    },
+    
+    complete: () => setLoading(false)
+  }), [request]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -105,7 +106,7 @@ export default function Activity() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
           Log Aktivitas & Audit Trail
         </h2>
         <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">
@@ -161,7 +162,7 @@ export default function Activity() {
               <button
                 type="button"
                 onClick={() => {
-                  setActionFilter('all');
+                  setActionFilter('all', '');
                   setSearch('');
                 }}
                 className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer"

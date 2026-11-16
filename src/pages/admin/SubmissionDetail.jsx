@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { observeRequest } from '../../utils/observeRequest';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   FileText,
@@ -19,7 +20,7 @@ import {
 import submissionAPI from '../../services/submissionAPI';
 import auditLogAPI from '../../services/auditLogAPI';
 import letterGeneratorAPI from '../../services/letterGeneratorAPI';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/useAuth';
 import { Skeleton, Spinner } from '../../components/Loading';
 import Alert from '../../components/Alert';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -32,6 +33,10 @@ const OFFICIALS = [
 
 export default function SubmissionDetail() {
   const { id } = useParams();
+  return <SubmissionDetailContent key={id} id={id} />;
+}
+
+function SubmissionDetailContent({ id }) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -50,39 +55,50 @@ export default function SubmissionDetail() {
   const [isDuplicateNumber, setIsDuplicateNumber] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
 
-  // Load Data Permohonan & Audit Log
-  const loadData = async () => {
+  const [reloadVersion, setReloadVersion] = useState(0);
+  const loadData = () => {
     setLoading(true);
-    try {
-      const res = await submissionAPI.getSubmissionById(id);
-      if (res.success && res.data) {
-        setSubmission(res.data);
-        if (res.data.nomorSurat) setNomorSurat(res.data.nomorSurat);
-        if (res.data.pejabatTTD) setPejabatTTD(res.data.pejabatTTD);
-        if (res.data.catatanVerifikasi) setCatatanVerifikasi(res.data.catatanVerifikasi);
-
-        // Ambil riwayat audit untuk permohonan ini
-        const logsRes = await auditLogAPI.getLogsByTarget(res.data.trackingCode);
-        if (logsRes.success) {
-          setLogs(logsRes.data || []);
-        }
-      }
-    } catch (err) {
-      setAlert({
-        type: 'error',
-        message: err.message || 'Gagal memuat data permohonan surat.'
-      });
-    } finally {
-      setLoading(false);
-    }
+    setReloadVersion(version => version + 1);
   };
 
   useEffect(() => {
-    loadData();
-  }, [id]);
+    const request = submissionAPI.getSubmissionById(id).then((res) => {
+      if (!res.success || !res.data) return null;
+      return { data: res.data };
+    });
+    return observeRequest(request, {
+      success: (result) => {
+        if (!result) return;
+        setSubmission(result.data);
+        setNomorSurat(result.data.nomorSurat || '');
+        setPejabatTTD(result.data.pejabatTTD || OFFICIALS[0].name);
+        setCatatanVerifikasi(result.data.catatanVerifikasi || '');
+
+      },
+      error: (err) => setAlert({
+        type: 'error',
+        message: err.message || 'Gagal memuat data permohonan surat.'
+      }),
+      complete: () => setLoading(false)
+    });
+  }, [id, reloadVersion]);
+
+  useEffect(() => {
+    if (!submission?.trackingCode) return;
+    return observeRequest(auditLogAPI.getLogsByTarget(submission.trackingCode), {
+      success: (res) => {
+        if (res.success) setLogs(res.data || []);
+      },
+      error: (err) => setAlert({
+        type: 'error',
+        message: err.message || 'Gagal memuat riwayat permohonan surat.'
+      })
+    });
+  }, [submission]);
 
   // Validasi real-time duplikasi nomor surat
   useEffect(() => {
+    let active = true;
     const checkDuplicate = async () => {
       if (!nomorSurat || !nomorSurat.trim() || !submission) {
         setIsDuplicateNumber(false);
@@ -90,14 +106,17 @@ export default function SubmissionDetail() {
       }
       try {
         const res = await submissionAPI.validateLetterNumber(nomorSurat, submission.id);
-        setIsDuplicateNumber(res.isDuplicate);
+        if (active) setIsDuplicateNumber(res.isDuplicate);
       } catch {
-        setIsDuplicateNumber(false);
+        if (active) setIsDuplicateNumber(false);
       }
     };
 
     const timer = setTimeout(checkDuplicate, 400);
-    return () => clearTimeout(timer);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [nomorSurat, submission]);
 
   // Auto-generate nomor surat resmi
@@ -293,7 +312,7 @@ export default function SubmissionDetail() {
           </button>
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+              <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
                 Verifikasi Permohonan Surat
               </h2>
               {getStatusBadge(submission.status)}
@@ -347,7 +366,7 @@ export default function SubmissionDetail() {
         <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl overflow-hidden shadow-xs">
           <div className="px-5 py-3.5 bg-slate-50/70 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-800 flex items-center gap-2">
             <User className="w-4 h-4 text-slate-700 dark:text-neutral-300" />
-            <h3 className="text-xs font-bold text-slate-800 dark:text-neutral-200 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">
               Data Pemohon & Berkas Pengajuan
             </h3>
           </div>
@@ -455,7 +474,7 @@ export default function SubmissionDetail() {
           <div className="px-5 py-3.5 bg-slate-50/70 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileCheck2 className="w-4 h-4 text-red-700 dark:text-red-400" />
-              <h3 className="text-xs font-bold text-slate-800 dark:text-neutral-200 uppercase tracking-wider">
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">
                 Panel Verifikasi & Keputusan
               </h3>
             </div>
@@ -634,7 +653,7 @@ export default function SubmissionDetail() {
         <div className="px-5 py-3.5 bg-slate-50/70 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <History className="w-4 h-4 text-slate-700 dark:text-neutral-300" />
-            <h3 className="text-xs font-bold text-slate-800 dark:text-neutral-200 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">
               Audit Trail & Riwayat Aktivitas Permohonan
             </h3>
           </div>

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Search, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useFormContext } from '../../contexts/FormContext';
+import { useFormContext } from '../../contexts/useForm';
 
 export default function Forms() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredForms, setFilteredForms] = useState([]);
   const searchInputRef = useRef(null);
 
   const navigate = useNavigate();
@@ -17,26 +16,18 @@ export default function Forms() {
     }
   }, []);
 
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredForms(allForms);
-    } else {
-      const lowercasedQuery = searchQuery.toLowerCase();
-      const filtered = allForms.filter(
-        (form) =>
-          form.name.toLowerCase().includes(lowercasedQuery) ||
-          form.status.toLowerCase().includes(lowercasedQuery)
-      );
-      setFilteredForms(filtered);
-    }
-  }, [searchQuery, allForms]);
+  const lowercasedQuery = searchQuery.toLowerCase();
+  const filteredForms = searchQuery.trim() === '' ? allForms : allForms.filter(
+    form => form.name.toLowerCase().includes(lowercasedQuery) ||
+      form.status.toLowerCase().includes(lowercasedQuery)
+  );
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-neutral-800">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Template & Formulir Surat
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Master Jenis Surat
           </h2>
           <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
             Kelola master formulir persyaratan permohonan surat dinas kelurahan.
@@ -47,7 +38,7 @@ export default function Forms() {
           className="inline-flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer w-full sm:w-auto justify-center"
         >
           <Plus size={15} />
-          <span>Buat Template Baru</span>
+          <span>Tambah jenis surat</span>
         </button>
       </div>
 
@@ -69,34 +60,17 @@ export default function Forms() {
 
         {/* List of Forms */}
         {filteredForms.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {filteredForms.map((form) => (
-              <div
-                key={form.id}
-                className="p-4 border border-slate-200 dark:border-neutral-800 rounded-xl bg-white dark:bg-neutral-900 hover:border-slate-300 dark:hover:border-neutral-700 transition-colors shadow-xs"
-              >
-                <div className="flex justify-between items-start mb-2.5">
-                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 dark:text-neutral-300">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        form.status === 'Active'
-                          ? 'bg-emerald-500'
-                          : form.status === 'Draft'
-                          ? 'bg-amber-500'
-                          : 'bg-slate-400'
-                      }`}
-                    />
-                    {form.status === 'Active' ? 'Aktif' : form.status === 'Draft' ? 'Draf' : form.status}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 rounded">
-                    {form.responses} respons
-                  </span>
-                </div>
-                <h3 className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white leading-snug">
-                  {form.name}
-                </h3>
-              </div>
-            ))}
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-neutral-800">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 dark:bg-neutral-950"><tr>{['Nama Jenis Surat', 'Status', 'Respons'].map(label => <th key={label} scope="col" className="p-4 font-medium">{label}</th>)}</tr></thead>
+              <tbody className="divide-y divide-slate-200 dark:divide-neutral-800">
+                {filteredForms.map(form => <tr key={form.id} className="hover:bg-slate-50 dark:hover:bg-neutral-800/40">
+                  <td className="p-4 font-medium text-slate-900 dark:text-white">{form.name}</td>
+                  <td className="p-4 text-slate-600 dark:text-neutral-300">{form.status === 'Active' ? 'Aktif' : form.status === 'Draft' ? 'Draf' : form.status}</td>
+                  <td className="p-4 tabular-nums text-slate-500 dark:text-neutral-400">{form.responses}</td>
+                </tr>)}
+              </tbody>
+            </table>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center border border-dashed border-slate-200 dark:border-neutral-800 rounded-xl bg-slate-50 dark:bg-neutral-950">

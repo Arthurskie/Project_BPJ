@@ -1,30 +1,36 @@
-import * as THREE from 'three';
+import {
+  Box3, BoxGeometry, CircleGeometry, CylinderGeometry, DirectionalLight,
+  ExtrudeGeometry, Group, HemisphereLight, MathUtils, Mesh,
+  MeshStandardMaterial, PCFSoftShadowMap, PerspectiveCamera, Scene,
+  ShadowMaterial, Shape, SRGBColorSpace, WebGLRenderer,
+} from 'three';
+import { fitCivicCamera } from './sceneFraming.js';
 
 export function mountCivicScene(host, onLost) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
+  const renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.type = PCFSoftShadowMap;
+  renderer.outputColorSpace = SRGBColorSpace;
   host.appendChild(renderer.domElement);
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(33, 1, 0.1, 50);
+  const scene = new Scene();
+  const camera = new PerspectiveCamera(33, 1, 0.1, 50);
   camera.position.set(7.8, 6.1, 10.5);
   camera.lookAt(0, 1.15, 0);
-  scene.add(new THREE.HemisphereLight(0xfffaf0, 0xb8ab99, 2.8));
-  const light = new THREE.DirectionalLight(0xfff4df, 4.2);
+  scene.add(new HemisphereLight(0xfffaf0, 0xb8ab99, 2.8));
+  const light = new DirectionalLight(0xfff4df, 4.2);
   light.position.set(-3, 8, 5);
   light.castShadow = true;
   light.shadow.mapSize.set(1024, 1024);
   Object.assign(light.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6 });
   light.shadow.bias = -0.002;
   scene.add(light);
-  const group = new THREE.Group();
+  const group = new Group();
   scene.add(group);
   const materials = {};
-  const mat = (color) => materials[color] ||= new THREE.MeshStandardMaterial({ color, roughness: 0.78 });
+  const mat = (color) => materials[color] ||= new MeshStandardMaterial({ color, roughness: 0.78 });
   const box = (w, h, d, x, y, z, color, parent = group) => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color));
+    const mesh = new Mesh(new BoxGeometry(w, h, d), mat(color));
     mesh.position.set(x, y, z); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
   };
   box(5.3, .18, 3.8, 0, -.05, 0, '#d8cfbf');
@@ -40,27 +46,29 @@ export function mountCivicScene(host, onLost) {
   for (const x of [-1.3, 1.3]) box(.52, .83, .06, x, 1.28, .98, '#a89f8e');
   box(4.55, .13, .6, 0, .3, 1.37, '#d0c5b3');
   box(4.85, .12, .65, 0, .18, 1.58, '#e0d6c6');
-  const roofShape = new THREE.Shape();
+  const roofShape = new Shape();
   roofShape.moveTo(-2.4, 0); roofShape.lineTo(2.4, 0); roofShape.lineTo(0, 1.22); roofShape.closePath();
-  const roof = new THREE.Mesh(new THREE.ExtrudeGeometry(roofShape, { depth: 2.85, bevelEnabled: false }), mat('#b92f34'));
+  const roof = new Mesh(new ExtrudeGeometry(roofShape, { depth: 2.85, bevelEnabled: false }), mat('#b92f34'));
   roof.position.set(0, 2.47, -1.65); roof.castShadow = true; group.add(roof);
   box(.045, 1.35, .045, 0, 4.05, -.2, '#786e60');
   box(.72, .24, .025, .38, 4.55, -.2, '#c42f35');
   box(.72, .24, .025, .38, 4.31, -.2, '#fffdf7');
-  const paper = new THREE.Group();
+  const paper = new Group();
   paper.position.set(2.05, 1.18, 1.8); paper.rotation.set(-.12, -.15, -.16); group.add(paper);
   box(1.3, 1.8, .08, 0, 0, 0, '#fffdf7', paper);
   box(.37, .065, .02, -.25, .57, .055, '#bc3539', paper);
   for (let i = 0; i < 4; i++) box(i === 3 ? .58 : .9, .035, .02, i === 3 ? -.16 : 0, .29 - i * .16, .055, '#c3b9aa', paper);
-  const seal = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .025, 32), mat('#ba3237'));
+  const seal = new Mesh(new CylinderGeometry(.2, .2, .025, 32), mat('#ba3237'));
   seal.rotation.x = Math.PI / 2; seal.position.set(.3, -.52, .065); paper.add(seal);
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(5, 64), new THREE.ShadowMaterial({ opacity: .12 }));
+  const floor = new Mesh(new CircleGeometry(5, 64), new ShadowMaterial({ opacity: .12 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -.16; floor.receiveShadow = true; scene.add(floor);
   let frame = 0, last = 0, visible = true, disposed = false, dirty = true;
   let targetX = 0, targetY = 0;
-  const resize = () => { const { width, height } = host.getBoundingClientRect(); if (!width || !height) return; renderer.setSize(width, height); camera.aspect = width / height; camera.updateProjectionMatrix(); dirty = true; resume(); };
+  const resize = () => { const { width, height } = host.getBoundingClientRect(); if (!width || !height) return; renderer.setSize(width, height, false);
+    const bounds = new Box3().setFromObject(group).expandByScalar(.3);
+    fitCivicCamera(camera, bounds, width / height); dirty = true; resume(); };
   const observer = new ResizeObserver(resize); observer.observe(host);
-  const move = (event) => { const r = host.getBoundingClientRect(); targetY = ((event.clientX - r.left) / r.width - .5) * .18; targetX = ((event.clientY - r.top) / r.height - .5) * .06; dirty = true; resume(); };
+  const move = (event) => { const r = host.getBoundingClientRect(); targetY = MathUtils.clamp((event.clientX - r.left) / r.width - .5, -.5, .5) * .18; targetX = MathUtils.clamp((event.clientY - r.top) / r.height - .5, -.5, .5) * .06; dirty = true; resume(); };
   const reset = () => { targetX = 0; targetY = 0; dirty = true; resume(); };
   const draw = (time) => {
     if (disposed || !visible || document.hidden) { frame = 0; return; }

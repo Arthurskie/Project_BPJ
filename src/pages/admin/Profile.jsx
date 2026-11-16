@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Shield, Mail, Key, Building2, BadgeCheck } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/useAuth';
 import Alert from '../../components/Alert';
 
 export default function Profile() {
@@ -32,7 +32,7 @@ export default function Profile() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
           Profil Pegawai & Administrator
         </h2>
         <p className="text-slate-500 dark:text-neutral-400 text-xs sm:text-sm mt-1">
@@ -78,7 +78,7 @@ export default function Profile() {
 
                 {/* Avatar Badge */}
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 rounded-full bg-red-700 text-white flex items-center justify-center text-xl font-bold shadow-xs">
+                  <div className="w-16 h-16 rounded-md bg-slate-800 text-white flex items-center justify-center text-2xl font-semibold shadow-xs">
                     {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
                   </div>
                   <div>

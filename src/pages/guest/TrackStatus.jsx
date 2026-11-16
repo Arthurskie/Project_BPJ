@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import GuestNavbar from '../../components/GuestNavbar';
-import heroBg from '../../assets/hero-bg.jpg';
+import './landing.css';
+import './track-status.css';
 import submissionAPI from '../../services/submissionAPI';
 
 export default function TrackStatus() {
@@ -60,37 +61,32 @@ export default function TrackStatus() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-neutral-950 text-slate-900 dark:text-neutral-100 font-sans flex flex-col">
+    <div className="landing-page track-page">
+      <a href="#track-main" className="landing-skip">Langsung ke pelacakan</a>
       <GuestNavbar />
 
-      {/* Header Banner */}
-      <section className="relative overflow-hidden bg-slate-900 py-12 sm:py-16 text-center text-white">
-        <div className="absolute inset-0">
-          <img src={heroBg} alt="" className="w-full h-full object-cover opacity-25" />
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 to-slate-900/95" />
-        </div>
-        <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6">
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-2">
-            Lacak Status Permohonan Surat
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
-            Pantau perkembangan proses naskah dinas Anda secara transparan dan real-time menggunakan kombinasi NIK dan Kode Tracking.
-          </p>
-        </div>
-      </section>
+      <section className="track-intro"><div className="track-shell">
+        <Link to="/guest" className="track-back"><ArrowLeft size={15} aria-hidden="true" /> Kembali ke Beranda</Link>
+        <p className="track-eyebrow">Layanan Persuratan</p>
+        <h1>Lacak status permohonan surat.</h1>
+        <p>Periksa perkembangan surat Anda menggunakan NIK pemohon dan kode tracking yang diterima saat pengajuan.</p>
+      </div></section>
 
       {/* Content Form & Result */}
-      <main className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 pb-16 w-full">
+      <main id="track-main" className="track-shell track-main">
+        <aside className="track-guidance"><p className="track-eyebrow">Pantau Permohonan</p><h2>Sudah sampai mana surat Anda?</h2><p>Siapkan NIK 16 digit dan kode tracking yang tertera pada bukti pengajuan surat.</p><p>Gunakan data yang sama dengan saat mengajukan permohonan agar surat dapat ditemukan.</p><Link to="/guest/submit">Ajukan surat baru <ArrowRight size={15} aria-hidden="true" /></Link></aside>
+        <div className="track-content">
         {/* Form Box */}
-        <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl p-5 sm:p-7 shadow-lg mb-6">
-          <form onSubmit={handleTrack} className="space-y-4">
+        <div className="track-card track-form-card">
+          <h2 className="track-form-title"><span>01</span> Data pelacakan</h2>
+          <form onSubmit={handleTrack} className="space-y-4" aria-busy={loading}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
+                <label htmlFor="track-nik" className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
                   Nomor Induk Kependudukan (NIK) <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text"
+                  id="track-nik" inputMode="numeric" type="text"
                   maxLength={16}
                   required
                   value={nik}
@@ -101,7 +97,7 @@ export default function TrackStatus() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
+                <label htmlFor="track-code" className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
                   Kode Tracking Surat <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -116,7 +112,7 @@ export default function TrackStatus() {
             </div>
 
             {errorMsg && (
-              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-start gap-2 animate-fade-in">
+              <div role="alert" className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-start gap-2 animate-fade-in">
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
                 <span>{errorMsg}</span>
               </div>
@@ -128,14 +124,15 @@ export default function TrackStatus() {
               className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white text-xs sm:text-sm font-semibold rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               <Search size={15} />
-              <span>{loading ? 'Mencari data...' : 'Lacak Status Sekarang'}</span>
+              <span>{loading ? 'Mencari data...' : 'Lacak Status'}</span>
             </button>
           </form>
         </div>
 
+        <div aria-live="polite">{loading && <p className="track-feedback" role="status">Sedang mencari permohonan surat Anda…</p>}{!result && !loading && !errorMsg && <div className="track-empty"><Search size={22} aria-hidden="true" /><div><h2>Status surat akan tampil di sini</h2><p>Masukkan data di atas untuk melihat status, perjalanan dokumen, dan catatan petugas.</p></div></div>}</div>
         {/* Result Card */}
         {result && (
-          <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl p-6 sm:p-8 shadow-lg animate-fade-in">
+          <div className="track-card track-result" role="status" aria-label="Hasil pelacakan permohonan">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-slate-200 dark:border-neutral-800 mb-6">
               <div>
                 <span className="text-[11px] font-mono font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/50 px-2.5 py-1 rounded-md">
@@ -158,16 +155,16 @@ export default function TrackStatus() {
                 Perjalanan Dokumen:
               </p>
               <div className="grid grid-cols-4 gap-1.5 text-center text-[10px] sm:text-xs font-semibold">
-                <div className={`py-2 px-1 rounded-lg ${result.tahap >= 1 ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-neutral-800 text-slate-400'}`}>
+                <div className={`py-2 px-1 rounded-lg ${result.tahap >= 1 ? 'bg-emerald-700 text-white' : 'bg-slate-100 dark:bg-neutral-800 text-slate-600'}`}>
                   1. Registrasi
                 </div>
-                <div className={`py-2 px-1 rounded-lg ${result.tahap >= 2 ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-neutral-800 text-slate-400'}`}>
+                <div className={`py-2 px-1 rounded-lg ${result.tahap >= 2 ? 'bg-emerald-700 text-white' : 'bg-slate-100 dark:bg-neutral-800 text-slate-600'}`}>
                   2. Verifikasi
                 </div>
-                <div className={`py-2 px-1 rounded-lg ${result.tahap >= 3 ? (result.status === 'ditolak' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white') : 'bg-slate-100 dark:bg-neutral-800 text-slate-400'}`}>
+                <div className={`py-2 px-1 rounded-lg ${result.tahap >= 3 ? (result.status === 'ditolak' ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-900') : 'bg-slate-100 dark:bg-neutral-800 text-slate-600'}`}>
                   3. Disposisi
                 </div>
-                <div className={`py-2 px-1 rounded-lg ${result.tahap >= 4 ? (result.status === 'ditolak' ? 'bg-red-700 text-white' : 'bg-emerald-700 text-white') : 'bg-slate-100 dark:bg-neutral-800 text-slate-400'}`}>
+                <div className={`py-2 px-1 rounded-lg ${result.tahap >= 4 ? (result.status === 'ditolak' ? 'bg-red-700 text-white' : 'bg-emerald-700 text-white') : 'bg-slate-100 dark:bg-neutral-800 text-slate-600'}`}>
                   4. Selesai
                 </div>
               </div>
@@ -191,7 +188,9 @@ export default function TrackStatus() {
             Ajukan Surat Baru <ArrowRight size={14} />
           </Link>
         </div>
+        </div>
       </main>
+      <footer className="track-footer"><div className="track-shell"><p>&copy; {new Date().getFullYear()} Portal e-Surat</p><Link to="/guest">Beranda</Link></div></footer>
     </div>
   );
 }

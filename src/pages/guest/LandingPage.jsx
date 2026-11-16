@@ -1,5 +1,5 @@
-﻿import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, FileText, Users, GraduationCap, Stamp, Search, MapPin, Clock, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import GuestNavbar from '../../components/GuestNavbar';
 import { GarudaLogo } from '../../components/IndonesiaSeal';
@@ -20,21 +20,44 @@ const steps = [
 
 export default function LandingPage() {
   const [activeSection, setActiveSection] = useState('beranda');
-  const scrollToSection = (event, id) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const scrollToSection = useCallback((event, id) => {
     event?.preventDefault();
     setActiveSection(id);
     window.dispatchEvent(new CustomEvent('nav-gliding'));
     document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
-  };
+  }, []);
   useEffect(() => {
-    const observer = new IntersectionObserver(entries => {
-      for (const entry of entries) if (entry.isIntersecting) setActiveSection(entry.target.id);
-    }, { rootMargin: '-15% 0px -55% 0px' });
-    for (const id of ['beranda', 'layanan', 'prosedur', 'informasi']) {
-      const section = document.getElementById(id);
-      if (section) observer.observe(section);
-    }
-    return () => observer.disconnect();
+    const requested = location.state?.section || location.hash.slice(1);
+    const section = ['beranda', 'layanan', 'prosedur', 'informasi'].includes(requested) ? requested : null;
+    if (!section && !location.hash && !location.state?.section) return;
+    const frame = requestAnimationFrame(() => {
+      if (section) scrollToSection(null, section);
+      const state = { ...location.state };
+      delete state.section;
+      navigate({ pathname: location.pathname, search: location.search, hash: '' }, { replace: true, state: Object.keys(state).length ? state : null });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [location.hash, location.pathname, location.search, location.state, navigate, scrollToSection]);
+  useEffect(() => {
+    const sections = ['beranda', 'layanan', 'prosedur', 'informasi'];
+    let frame = 0;
+    const updateSection = () => {
+      frame = 0;
+      const readingLine = Math.min(window.innerHeight * .3, 200);
+      const current = sections.filter(id => document.getElementById(id)?.getBoundingClientRect().top <= readingLine).at(-1);
+      setActiveSection(current || 'beranda');
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(updateSection); };
+    updateSection();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
   }, []);
   return <div className="landing-page">
     <a className="landing-skip" href="#konten-utama">Lewati navigasi</a>

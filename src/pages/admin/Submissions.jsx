@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { observeRequest } from '../../utils/observeRequest';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -13,7 +14,7 @@ import {
   FileCheck2
 } from 'lucide-react';
 import submissionAPI from '../../services/submissionAPI';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/useAuth';
 import { Skeleton } from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import Alert from '../../components/Alert';
@@ -26,7 +27,7 @@ export default function Submissions() {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, updateFilter] = useState('all');
   const [alert, setAlert] = useState(null);
 
   // State Modal Cepat Update Status
@@ -36,23 +37,26 @@ export default function Submissions() {
   const [notes, setNotes] = useState('');
   const [updating, setUpdating] = useState(false);
 
-  const fetchSubmissions = async () => {
+  const [request, setRequest] = useState({ status: 'all', search: '' });
+
+  const fetchSubmissions = () => {
     setLoading(true);
-    try {
-      const res = await submissionAPI.getAllSubmissions({ status: statusFilter, search });
-      if (res.success) {
-        setSubmissions(res.data);
-      }
-    } catch {
-      setAlert({ type: 'error', message: 'Gagal mengambil data permohonan surat.' });
-    } finally {
-      setLoading(false);
-    }
+    setRequest({ status: statusFilter, search });
   };
 
-  useEffect(() => {
-    fetchSubmissions();
-  }, [statusFilter]);
+  const setStatusFilter = (value, query = search) => {
+    updateFilter(value);
+    setLoading(true);
+    setRequest({ status: value, search: query });
+  };
+
+  useEffect(() => observeRequest(submissionAPI.getAllSubmissions(request), {
+    success: (res) => {
+      if (res.success) setSubmissions(res.data);
+    },
+    error: () => setAlert({ type: 'error', message: 'Gagal mengambil data permohonan surat.' }),
+    complete: () => setLoading(false)
+  }), [request]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -128,7 +132,7 @@ export default function Submissions() {
       {/* Top Header & New Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
             Permohonan Surat Masuk
           </h2>
           <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">
@@ -213,7 +217,7 @@ export default function Submissions() {
                 type="button"
                 onClick={() => {
                   setSearch('');
-                  setStatusFilter('all');
+                  setStatusFilter('all', '');
                 }}
                 className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
               >

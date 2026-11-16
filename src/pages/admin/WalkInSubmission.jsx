@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import submissionAPI from '../../services/submissionAPI';
 import letterGeneratorAPI from '../../services/letterGeneratorAPI';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/useAuth';
 import Alert from '../../components/Alert';
 import { Spinner } from '../../components/Loading';
 
@@ -206,7 +206,7 @@ export default function WalkInSubmission() {
           </div>
 
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
               Permohonan Walk-in Berhasil Disimpan!
             </h2>
             <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1 max-w-md mx-auto">
@@ -219,7 +219,7 @@ export default function WalkInSubmission() {
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
               Nomor Tiket / Kode Pelacakan
             </span>
-            <span className="font-mono text-xl font-bold text-red-700 dark:text-red-400 block mt-1">
+            <span className="font-mono text-2xl font-semibold text-red-700 dark:text-red-400 block mt-1">
               {createdResult.trackingCode}
             </span>
             <div className="mt-3 pt-3 border-t border-slate-200 dark:border-neutral-800 text-xs text-slate-600 dark:text-neutral-400 flex justify-between">
@@ -305,7 +305,7 @@ export default function WalkInSubmission() {
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
               Input Permohonan Walk-in (Offline)
             </h2>
             <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
@@ -331,7 +331,7 @@ export default function WalkInSubmission() {
               1
             </span>
             <div>
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Identitas Pemohon
               </h3>
               <p className="text-[11px] text-slate-400">Pastikan NIK dan identitas sesuai KTP asli pemohon</p>
@@ -407,7 +407,7 @@ export default function WalkInSubmission() {
               2
             </span>
             <div>
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Detail Permohonan Surat
               </h3>
               <p className="text-[11px] text-slate-400">Jenis surat dan maksud keperluan pembuatan</p>
@@ -457,7 +457,7 @@ export default function WalkInSubmission() {
               3
             </span>
             <div>
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Internal Pelayanan Loket
               </h3>
               <p className="text-[11px] text-slate-400">Pengaturan status penyelesaian dan nomor surat dinas</p>

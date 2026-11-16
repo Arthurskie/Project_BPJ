@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '../../contexts/useTheme';
 import { Sun, Moon, Shield, Database, CheckCircle2 } from 'lucide-react';
 import Alert from '../../components/Alert';
 
@@ -19,7 +19,7 @@ export default function Settings() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="pb-4 border-b border-slate-200 dark:border-neutral-800">
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
           Pengaturan Sistem
         </h2>
         <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">

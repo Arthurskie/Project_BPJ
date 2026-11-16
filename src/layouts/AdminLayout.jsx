@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import './admin.css';
 import Sidebar from '../components/Sidebar';
 import { Menu, LogOut, User, Settings, ExternalLink, ShieldCheck } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
@@ -19,13 +20,14 @@ export default function AdminLayout() {
     navigate('/login');
   };
 
-  // Close sidebar & dropdown on mobile route change
-  useEffect(() => {
+  const [previousPath, setPreviousPath] = useState(location.pathname);
+  if (previousPath !== location.pathname) {
+    setPreviousPath(location.pathname);
     if (window.innerWidth < 1024) {
       setIsSidebarOpen(false);
     }
     setShowProfileMenu(false);
-  }, [location.pathname]);
+  }
 
   // Handle window resize
   useEffect(() => {
@@ -40,6 +42,13 @@ export default function AdminLayout() {
 
   // Close profile dropdown when clicking outside
   useEffect(() => {
+    function handleEscape(event) {
+      if (event.key === "Escape" && profileRef.current?.contains(document.activeElement)) {
+        setShowProfileMenu(false);
+        profileRef.current?.querySelector("button")?.focus();
+      }
+    }
+    document.addEventListener("keydown", handleEscape);
     function handleClickOutside(event) {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setShowProfileMenu(false);
@@ -48,31 +57,33 @@ export default function AdminLayout() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
     };
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-neutral-950 text-slate-900 dark:text-neutral-100 font-sans">
+    <div className="admin-interface flex h-screen overflow-hidden bg-slate-50 dark:bg-neutral-950 text-slate-900 dark:text-neutral-100 font-sans">
       {/* Sidebar */}
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 w-full min-w-0 overflow-hidden">
         {/* Top Navbar */}
-        <header className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16 border-b border-slate-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 z-10 sticky top-0 shrink-0">
+        <header className="flex items-center justify-between px-4 sm:px-6 h-20 border-b border-slate-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 z-10 sticky top-0 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
-              aria-label="Toggle menu navigasi"
+              aria-label="Buka atau tutup menu navigasi" aria-expanded={isSidebarOpen} aria-controls="admin-sidebar"
             >
               <Menu size={18} />
             </button>
 
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-white truncate">
-                Panel Pelayanan e-Surat
+                Administrasi /
+                {location.pathname === '/admin' ? 'Dasbor' : location.pathname.includes('/submissions/new') ? 'Loket Pelayanan' : location.pathname.includes('/submissions/') ? 'Verifikasi Permohonan' : location.pathname.includes('/submissions') ? 'Permohonan Masuk' : location.pathname.includes('/forms') ? 'Master Jenis Surat' : location.pathname.includes('/profile') ? 'Profil' : location.pathname.includes('/activity') ? 'Log Aktivitas' : 'Pengaturan'}
               </span>
             </div>
           </div>
@@ -96,10 +107,11 @@ export default function AdminLayout() {
             <div className="relative" ref={profileRef}>
               <button
                 type="button"
+                aria-label="Menu akun" aria-expanded={showProfileMenu}
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center gap-2.5 p-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer text-left"
               >
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-700 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-md bg-slate-800 text-white flex items-center justify-center text-xs font-bold shrink-0">
                   {user?.name ? user.name.charAt(0).toUpperCase() : 'P'}
                 </div>
                 <div className="hidden sm:block text-left leading-tight">
@@ -165,7 +177,7 @@ export default function AdminLayout() {
 
         {/* Page Content Container */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 dark:bg-neutral-950">
-          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+          <div className="p-5 sm:p-8 lg:p-10 max-w-[1440px] mx-auto">
             <Outlet />
           </div>
         </main>

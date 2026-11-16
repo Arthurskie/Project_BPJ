@@ -42,6 +42,7 @@ export default function CivicIllustration() {
   return <div className="civic-art" aria-hidden="true">
     <div className={`civic-static ${ready ? 'is-hidden' : ''}`}>
       <svg viewBox="0 0 600 460" focusable="false">
+        <g className="static-building">
         <ellipse cx="300" cy="381" rx="229" ry="33" fill="#e7e1d8" />
         <path d="m95 330 205-44 205 44-205 65z" fill="#d5ccbd" />
         <path d="M137 176h326v153H137z" fill="#eee8dc" />
@@ -52,6 +53,7 @@ export default function CivicIllustration() {
         <path d="M127 321h346v16H127zm-13 17h372v15H114z" fill="#c3b9a9" />
         <path d="M299 87V28" stroke="#777066" strokeWidth="4" /><path d="M301 29h49v17h-49z" fill="#bd292f" /><path d="M301 46h49v17h-49z" fill="#fff" />
         <g transform="translate(385 215) rotate(12)"><rect width="104" height="139" rx="4" fill="#fffdf8" stroke="#dbd1c3" strokeWidth="2" /><path d="M19 24h31M19 43h66M19 56h66M19 69h48" stroke="#bcb2a5" strokeWidth="5" /><circle cx="71" cy="105" r="15" fill="#b62c31" /><path d="m64 105 5 5 10-12" stroke="white" strokeWidth="3" fill="none" /></g>
+        </g>
       </svg>
     </div>
     <div className={`civic-canvas ${ready ? 'is-ready' : ''}`} ref={host} />

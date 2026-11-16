@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GarudaLogo, RedWhiteRibbon } from '../components/IndonesiaSeal';
 import { ShieldAlert, ArrowLeft, Home, LogIn } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 export default function Forbidden() {
   const navigate = useNavigate();

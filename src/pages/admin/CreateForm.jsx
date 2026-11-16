@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Type, List, CheckSquare, Settings2, Trash2 } from 'lucide-react';
-import { useFormContext } from '../../contexts/FormContext';
+import { ArrowLeft, Type, List, CheckSquare, Settings2, Trash2 } from 'lucide-react';
+import { useFormContext } from '../../contexts/useForm';
 
 export default function CreateForm() {
   const navigate = useNavigate();
@@ -74,7 +74,7 @@ export default function CreateForm() {
             <ArrowLeft size={16} />
           </button>
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Create New Form</h2>
+            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">Create New Form</h2>
             <p className="text-slate-500 dark:text-neutral-400 text-sm mt-1">Design your form by adding fields below.</p>
           </div>
         </div>
@@ -118,7 +118,7 @@ export default function CreateForm() {
 
           {/* Fields List */}
           <div className="space-y-4">
-            {fields.map((field, index) => (
+            {fields.map((field) => (
               <div key={field.id} className="bg-white dark:bg-black border border-slate-200 dark:border-neutral-800 rounded-xl shadow-sm p-5 relative group animate-fade-in">
                 <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button 
