@@ -1,6 +1,10 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
+
+:root {
+  color-scheme: light;
+}
 
 html {
   scroll-behavior: smooth;
