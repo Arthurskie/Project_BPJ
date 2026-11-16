@@ -13,7 +13,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
   const lastScrollY = useRef(0);
   const isProgrammaticScroll = useRef(false);
   const location = useLocation();
-  const isLanding = (location.pathname === '/guest' || location.pathname === '/');
+  const isLanding = location.pathname === '/guest' || location.pathname === '/';
 
   // Sinkronisasi status navbar saat terjadi navigasi smooth glide
   useEffect(() => {
@@ -84,8 +84,9 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
   }, [mobileOpen]);
 
   const handleNav = (e, id) => {
-    if (e) e.preventDefault();
+    if (e && (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) return;
     if (isLanding && onScrollToSection) {
+      e?.preventDefault();
       setMobileOpen(false);
       setNavVisible(true);
       isProgrammaticScroll.current = true;
@@ -98,6 +99,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
   };
 
   const handleLogoClick = (e) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     if (isLanding) {
       e.preventDefault();
       setMobileOpen(false);
@@ -122,7 +124,6 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
 
   return (
     <header
-      data-guest-navbar
       className={`sticky top-0 z-50 w-full transition-transform duration-300 ease-in-out border-b border-slate-200 dark:border-neutral-800 ${
         (navVisible || mobileOpen) ? 'translate-y-0' : '-translate-y-full'
       } ${
@@ -181,7 +182,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                   <Link
                     key={item.id}
                     to="/guest"
-                    state={{ section: item.id }}
+                      state={{ section: item.id }}
                     className={linkClass}
                   >
                     {item.label}
@@ -273,7 +274,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                     <Link
                       key={item.id}
                       to="/guest"
-                    state={{ section: item.id }}
+                      state={{ section: item.id }}
                       onClick={() => setMobileOpen(false)}
                       className={mobileLinkClass}
                     >

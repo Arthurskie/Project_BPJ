@@ -1,531 +1,95 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import {
-  ArrowRight,
-  ChevronDown,
-  Building2,
-  BookOpen,
-  Stamp,
-  Clock,
-  Search,
-  PhoneCall,
-  MapPin,
-  ArrowUp
-} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowRight, FileText, Users, GraduationCap, Stamp, Search, MapPin, Clock, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import GuestNavbar from '../../components/GuestNavbar';
-import { GarudaLogo, FlagID } from '../../components/IndonesiaSeal';
+import { GarudaLogo } from '../../components/IndonesiaSeal';
+import CivicIllustration from '../../components/civic/CivicIllustration';
+import './landing.css';
+
+const services = [
+  { title: 'Permohonan Audiensi', description: 'Sampaikan permohonan pertemuan, koordinasi, atau diskusi dengan pimpinan.', icon: Users },
+  { title: 'Penelitian & Magang', description: 'Ajukan izin riset, penelitian akademik, atau praktik kerja lapangan.', icon: GraduationCap },
+  { title: 'Surat Keterangan', description: 'Urus surat keterangan, rekomendasi, dan surat pengantar resmi.', icon: Stamp },
+];
+const steps = [
+  ['Siapkan dokumen', 'Siapkan identitas dan surat permohonan beserta lampiran pendukung.'],
+  ['Kirim pengajuan', 'Lengkapi formulir online dengan data yang benar dan unggah dokumen.'],
+  ['Pantau proses', 'Simpan kode tracking. Gunakan NIK dan kode tersebut untuk melihat status.'],
+  ['Terima hasil', 'Ikuti perkembangan verifikasi dan tindak lanjut melalui halaman pelacakan.'],
+];
 
 export default function LandingPage() {
   const [activeSection, setActiveSection] = useState('beranda');
-  const [showScrollTop, setShowScrollTop] = useState(false);
-  const [trackingCode, setTrackingCode] = useState('');
-  const navigate = useNavigate();
   const location = useLocation();
-  const heroRef = useRef(null);
-  const initialNavigation = useRef(true);
-
-  const getHeaderOffset = () => document.querySelector('[data-guest-navbar]')?.getBoundingClientRect().height || 68;
-
-  const scrollToSection = useCallback((e, id, immediate = false) => {
-    if (e) e.preventDefault();
+  const navigate = useNavigate();
+  const scrollToSection = useCallback((event, id) => {
+    event?.preventDefault();
     setActiveSection(id);
     window.dispatchEvent(new CustomEvent('nav-gliding'));
-
-    if (id === 'beranda') {
-      window.scrollTo({
-        top: 0,
-        behavior: immediate || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
-      });
-      return;
-    }
-    const element = document.getElementById(id);
-    if (!element) return;
-
-    requestAnimationFrame(() => {
-      const headerOffset = getHeaderOffset();
-      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
-      const offsetPosition = elementPosition - headerOffset;
-
-      window.scrollTo({
-        top: Math.max(0, Math.round(offsetPosition)),
-        behavior: immediate || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
-      });
-    });
+    document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
   }, []);
-
   useEffect(() => {
-    const isReload = initialNavigation.current && performance.getEntriesByType('navigation')[0]?.type === 'reload';
-    const destination = isReload ? null : location.state?.section;
-    const previousRestoration = window.history.scrollRestoration;
-    window.history.scrollRestoration = 'manual';
-    let secondFrame;
+    const requested = location.state?.section || location.hash.slice(1);
+    const section = ['beranda', 'layanan', 'prosedur', 'informasi'].includes(requested) ? requested : null;
+    if (!section && !location.hash && !location.state?.section) return;
     const frame = requestAnimationFrame(() => {
-      secondFrame = requestAnimationFrame(() => {
-        initialNavigation.current = false;
-        // Consume the section instruction without creating another history entry.
-        if (window.history.state?.usr?.section) {
-          const { section: _section, ...remainingState } = window.history.state.usr;
-          window.history.replaceState({ ...window.history.state, usr: remainingState }, '');
-        }
-        if (destination) scrollToSection(null, destination, true);
-        else window.scrollTo({ top: 0, behavior: 'instant' });
-      });
+      if (section) scrollToSection(null, section);
+      const state = { ...location.state };
+      delete state.section;
+      navigate({ pathname: location.pathname, search: location.search, hash: '' }, { replace: true, state: Object.keys(state).length ? state : null });
     });
-    return () => { cancelAnimationFrame(frame); cancelAnimationFrame(secondFrame); window.history.scrollRestoration = previousRestoration; };
-  }, [location.key, location.state?.section, scrollToSection]);
-
-  // Deteksi seksi aktif secara non-blocking menggunakan requestAnimationFrame
+    return () => cancelAnimationFrame(frame);
+  }, [location.hash, location.pathname, location.search, location.state, navigate, scrollToSection]);
   useEffect(() => {
-    let ticking = false;
-
-    const computeActiveSection = () => {
-      setShowScrollTop(window.scrollY > 300);
-
-      const viewportCenter = window.scrollY + window.innerHeight / 2;
-      const sections = ['beranda', 'layanan', 'prosedur', 'informasi'];
-      let current = 'beranda';
-      for (const id of sections) {
-        const el = document.getElementById(id);
-        if (el) {
-          const elTop = el.getBoundingClientRect().top + window.pageYOffset;
-          const elBottom = elTop + el.offsetHeight;
-          if (viewportCenter >= elTop && viewportCenter < elBottom) {
-            current = id;
-            break;
-          }
-        }
-      }
-      setActiveSection(current);
-      ticking = false;
+    const sections = ['beranda', 'layanan', 'prosedur', 'informasi'];
+    let frame = 0;
+    const updateSection = () => {
+      frame = 0;
+      const readingLine = Math.min(window.innerHeight * .3, 200);
+      const current = sections.filter(id => document.getElementById(id)?.getBoundingClientRect().top <= readingLine).at(-1);
+      setActiveSection(current || 'beranda');
     };
-
-    const handleScroll = () => {
-      if (!ticking) {
-        requestAnimationFrame(computeActiveSection);
-        ticking = true;
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    
-    // Tunda penghitungan awal ke frame berikutnya agar tidak memblokir hydration awal
-    const timer = setTimeout(() => {
-      requestAnimationFrame(computeActiveSection);
-    }, 120);
-
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(updateSection); };
+    updateSection();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      clearTimeout(timer);
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
     };
   }, []);
-
-  useEffect(() => {
-    if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const targets = [...document.querySelectorAll('.snap-section:not(#beranda) > div')];
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-revealed');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.08, rootMargin: '0px 0px -24px 0px' });
-    targets.forEach(target => { target.classList.add('landing-reveal'); observer.observe(target); });
-    return () => { observer.disconnect(); targets.forEach(target => target.classList.remove('landing-reveal', 'is-revealed')); };
-  }, []);
-
-  const handleTrack = (e) => {
-    e.preventDefault();
-    navigate('/guest/track?code=' + encodeURIComponent(trackingCode.trim().toUpperCase()));
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-neutral-950 text-slate-900 dark:text-neutral-100 font-sans snap-container relative selection:bg-red-500 selection:text-white">
-
-      {/* ── Smart Sticky Navbar (Auto Hide & Reveal) ── */}
-      <GuestNavbar activeSection={activeSection} onScrollToSection={scrollToSection} />
-
-      {/* ── Indikator Titik Navigasi Samping (Floating Side Dots Indicator - Desktop Only) ── */}
-      <div
-        className="hidden lg:flex fixed right-6 top-1/2 -translate-y-1/2 z-40 flex-col items-end gap-3.5 pointer-events-auto"
-        role="navigation"
-        aria-label="Navigasi Seksi Cepat"
-      >
-        {[
-          { id: 'beranda', label: 'Beranda' },
-          { id: 'layanan', label: 'Jenis Layanan' },
-          { id: 'prosedur', label: 'Prosedur Pengajuan' },
-          { id: 'informasi', label: 'Pertanyaan Umum' },
-        ].map((item) => {
-          const isActive = activeSection === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={(e) => scrollToSection(e, item.id)}
-              className="group relative flex items-center justify-end p-1.5 focus:outline-none cursor-pointer"
-              aria-label={`Pindah ke bagian ${item.label}`}
-            >
-              {/* Tooltip on hover */}
-              <span className="absolute right-8 px-2.5 py-1 text-[11px] font-semibold rounded-md bg-slate-900/95 dark:bg-slate-100 text-white dark:text-slate-900 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap shadow-lg translate-x-1 group-hover:translate-x-0 border border-slate-700/80 dark:border-slate-300">
-                {item.label}
-              </span>
-              {/* Indicator Dot / Elongated Pill with Red Accent Ring */}
-              <span
-                className={`transition-all duration-300 rounded-full block ${
-                  isActive
-                    ? 'w-2.5 h-7 bg-red-600 shadow-md ring-4 ring-red-500/25'
-                    : 'w-2.5 h-2.5 bg-slate-400/50 dark:bg-neutral-600 hover:bg-red-500 hover:scale-125'
-                }`}
-              />
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Tombol Melayang Kembali ke Atas (Floating Scroll-To-Top) ── */}
-      <button
-        onClick={() => scrollToSection(null, 'beranda')}
-        className={`fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40 p-2.5 sm:p-3.5 rounded-full bg-red-700 hover:bg-red-800 active:scale-95 text-white shadow-xl shadow-red-950/30 border border-red-600/50 transition-all duration-300 flex items-center justify-center group cursor-pointer ${
-          showScrollTop ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-6 pointer-events-none'
-        }`}
-        aria-label="Kembali ke puncak halaman"
-      >
-        <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-y-0.5 transition-transform" />
-      </button>
-
-      <main>
-
-        {/* ── Beranda (Hero) ── */}
-        <section
-          id="beranda"
-          ref={heroRef}
-          className="snap-section relative min-h-[calc(100dvh-68px)] lg:min-h-[calc(100vh-68px)] flex flex-col justify-center items-center overflow-hidden bg-slate-900 scroll-mt-[68px] pt-6 pb-10 sm:py-12"
-        >
-          {/* Latar Belakang Hero: 100% Pure CSS Tanpa Gambar Eksternal (LCP Instan) */}
-          <div className="absolute inset-0 bg-slate-950 overflow-hidden pointer-events-none">
-            <div
-              className="absolute inset-0 opacity-15"
-              style={{
-                backgroundImage: `radial-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px)`,
-                backgroundSize: '24px 24px'
-              }}
-            />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-red-700/15 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/60 via-transparent to-slate-950" />
+  return <div className="landing-page">
+    <a className="landing-skip" href="#konten-utama">Lewati navigasi</a>
+    <GuestNavbar activeSection={activeSection} onScrollToSection={scrollToSection} />
+    <main id="konten-utama">
+      <section className="landing-hero landing-shell" id="beranda" aria-labelledby="hero-title">
+        <div className="hero-copy">
+          <p className="landing-eyebrow"><span /> Portal Pelayanan Persuratan</p>
+          <h1 id="hero-title">Urus surat Anda.<br /><span>Lebih mudah,</span><br />lebih terarah.</h1>
+          <p className="hero-description">Ajukan permohonan dan pantau proses persuratan dalam satu portal. Layanan publik yang dapat Anda akses tanpa harus datang ke kantor.</p>
+          <div className="hero-actions">
+            <Link className="landing-button primary" to="/guest/submit">Ajukan Surat <ArrowRight size={18} aria-hidden="true" /></Link>
+            <Link className="landing-button secondary" to="/guest/track"><Search size={18} aria-hidden="true" /> Lacak Pengajuan</Link>
           </div>
-
-          <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center w-full">
-
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-2.5 sm:mb-4 leading-snug sm:leading-tight">
-              Portal Pelayanan Persuratan
-              <br className="hidden sm:block" />
-              <span className="text-red-300"> &amp; Administrasi Terpadu</span>
-            </h1>
-
-            <p className="text-slate-300 text-xs sm:text-base max-w-2xl mx-auto mb-5 sm:mb-7 leading-relaxed px-1 sm:px-2">
-              Ajukan surat masuk, lacak status dokumen, dan kelola administrasi
-              persuratan secara digital tanpa perlu datang ke kantor.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 mb-5 sm:mb-8 w-full max-w-md sm:max-w-none mx-auto">
-              <Link
-                to="/guest/submit"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-xs sm:text-sm font-semibold text-white bg-red-700 hover:bg-red-800 active:scale-[0.98] rounded-lg shadow-lg transition-all group"
-              >
-                Buat Pengajuan Surat
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-              <a
-                href="#prosedur"
-                onClick={(e) => scrollToSection(e, 'prosedur')}
-                className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 text-xs sm:text-sm font-medium text-white bg-white/10 border border-white/20 hover:bg-white/20 active:scale-[0.98] rounded-lg transition-all"
-              >
-                Lihat Prosedur
-              </a>
-            </div>
-
-            {/* Lacak Dokumen */}
-            <div className="max-w-xl mx-auto bg-white/95 dark:bg-neutral-900/95 backdrop-blur border border-slate-200 dark:border-neutral-700 rounded-xl p-3.5 sm:p-5 shadow-xl text-left w-full">
-              <p className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-neutral-400 mb-2 uppercase tracking-wider">
-                Lacak Status Dokumen
-              </p>
-              <form onSubmit={handleTrack} className="flex gap-2">
-                <input
-                  type="text"
-                  aria-label="Nomor registrasi surat"
-                  value={trackingCode}
-                  onChange={(e) => setTrackingCode(e.target.value)}
-                  placeholder="Masukkan nomor registrasi"
-                  className="flex-1 min-w-0 px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-neutral-800 border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
-                />
-                <button
-                  type="submit"
-                  className="px-3.5 sm:px-5 py-2 sm:py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-red-700 dark:hover:bg-red-800 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50 active:scale-[0.98] cursor-pointer"
-                >
-                  <Search size={14} className="shrink-0" />
-                  <span>Lacak</span>
-                </button>
-              </form>
-
-<p className="mt-3 text-xs text-slate-500 dark:text-neutral-400">Lanjutkan ke halaman pelacakan dan masukkan NIK untuk memeriksa status.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Layanan ── */}
-        <section
-          id="layanan"
-          className="snap-section py-10 sm:py-14 lg:py-0 lg:min-h-[calc(100vh-68px)] flex flex-col justify-center items-center bg-white dark:bg-neutral-900 border-b border-slate-200 dark:border-neutral-800 scroll-mt-[68px]"
-        >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-            <div className="mb-5 sm:mb-8 text-center sm:text-left">
-              <h2 className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1.5 sm:mb-2">
-                Jenis Layanan
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-neutral-400 max-w-xl mx-auto sm:mx-0">
-                Pilih jenis permohonan sesuai kebutuhan Anda. Seluruh layanan tidak dipungut biaya.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
-              {[
-                {
-                  icon: Building2,
-                  title: 'Permohonan Audiensi',
-                  desc: 'Pengajuan pertemuan resmi atau konsultasi dengan pimpinan instansi.',
-                  sla: '1 hari kerja',
-                  color: 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/40',
-                },
-                {
-                  icon: BookOpen,
-                  title: 'Izin Penelitian & Magang',
-                  desc: 'Surat izin riset, skripsi/tesis, atau permohonan magang (PKL).',
-                  sla: '2 hari kerja',
-                  color: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40',
-                },
-                {
-                  icon: Stamp,
-                  title: 'Surat Keterangan',
-                  desc: 'Pengurusan surat keterangan, rekomendasi, atau surat pengantar resmi.',
-                  sla: '1 hari kerja',
-                  color: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40',
-                },
-              ].map((item, i) => (
-                <div
-                  key={i}
-                  className="p-4 sm:p-6 rounded-xl border border-slate-200 dark:border-neutral-800 hover:border-slate-300 dark:hover:border-neutral-700 transition-colors bg-white dark:bg-neutral-900/50 shadow-xs flex items-start sm:flex-col gap-3.5 sm:gap-0"
-                >
-                  <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 sm:mb-4 ${item.color}`}>
-                    <item.icon size={20} className="sm:w-5 sm:h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1">
-                      <h3 className="font-semibold text-sm sm:text-base text-slate-900 dark:text-white leading-tight">
-                        {item.title}
-                      </h3>
-                      <span className="self-start sm:self-auto text-[10px] font-medium text-slate-600 dark:text-neutral-400 bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1">
-                        <Clock size={10} />
-                        <span>{item.sla}</span>
-                      </span>
-                    </div>
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-neutral-400 leading-relaxed sm:mb-3">
-                      {item.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 sm:mt-8 text-center">
-              <Link
-                to="/guest/submit"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs sm:text-sm font-semibold text-white bg-red-700 hover:bg-red-800 active:scale-[0.98] rounded-lg transition-colors shadow-xs"
-              >
-                Buka Formulir Pengajuan
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Prosedur ── */}
-        <section
-          id="prosedur"
-          className="snap-section py-10 sm:py-14 lg:py-0 lg:min-h-[calc(100vh-68px)] flex flex-col justify-center items-center bg-slate-50 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-900 scroll-mt-[68px]"
-        >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-            <div className="text-center mb-5 sm:mb-8">
-              <h2 className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1.5 sm:mb-2">
-                Prosedur Pengajuan
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-neutral-400 max-w-lg mx-auto">
-                Alur pemrosesan surat dari awal pengajuan hingga dokumen selesai.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5">
-              {[
-                { step: '01', title: 'Isi Formulir', desc: 'Lengkapi data diri dan unggah berkas permohonan.' },
-                { step: '02', title: 'Verifikasi', desc: 'Petugas Tata Usaha memeriksa kelengkapan berkas.' },
-                { step: '03', title: 'Disposisi', desc: 'Surat diteruskan ke pimpinan untuk ditindaklanjuti.' },
-                { step: '04', title: 'Selesai', desc: 'Surat balasan terbit dan dikirim ke email pemohon.' },
-              ].map((item, i) => (
-                <div
-                  key={i}
-                  className="bg-white dark:bg-neutral-900 p-3.5 sm:p-5 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-xs flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] sm:text-xs font-mono font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded">
-                        Tahap {item.step}
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-xs sm:text-base text-slate-900 dark:text-white mb-1 leading-snug">
-                      {item.title}
-                    </h3>
-                    <p className="text-[11px] sm:text-sm text-slate-600 dark:text-neutral-400 leading-relaxed">
-                      {item.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── Informasi / FAQ ── */}
-        <section
-          id="informasi"
-          className="snap-section py-10 sm:py-14 lg:py-0 lg:min-h-[calc(100vh-68px)] flex flex-col justify-center items-center bg-white dark:bg-neutral-900 border-b border-slate-200 dark:border-neutral-800 scroll-mt-[68px]"
-        >
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-            <div className="text-center mb-5 sm:mb-8">
-              <h2 className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1.5 sm:mb-2">
-                Pertanyaan Umum
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-neutral-400">
-                Informasi seputar penggunaan portal pelayanan persuratan.
-              </p>
-            </div>
-
-            <div className="space-y-2.5 sm:space-y-3">
-              {[
-                {
-                  q: 'Apakah layanan ini dikenakan biaya?',
-                  a: 'Tidak. Seluruh layanan persuratan melalui portal ini sepenuhnya gratis dan tidak dipungut biaya dalam bentuk apapun.',
-                },
-                {
-                  q: 'Berapa lama proses verifikasi dokumen?',
-                  a: 'Verifikasi awal dilakukan maksimal 1×24 jam kerja sejak dokumen diterima. Proses disposisi pimpinan membutuhkan 1–3 hari kerja tergantung sifat surat.',
-                },
-                {
-                  q: 'Format file apa yang diterima?',
-                  a: 'Dokumen lampiran harus berformat PDF, DOC, atau DOCX dengan ukuran maksimal 10 MB per berkas.',
-                },
-                {
-                  q: 'Bagaimana cara mengetahui status surat saya?',
-                  a: 'Gunakan fitur "Lacak Status Dokumen" di halaman utama dengan memasukkan nomor registrasi yang Anda terima saat pengajuan.',
-                },
-              ].map((item, i) => (
-                <details
-                  key={i}
-                  className="group border border-slate-200 dark:border-neutral-800 rounded-xl bg-slate-50 dark:bg-neutral-950 overflow-hidden"
-                >
-                  <summary className="flex items-center justify-between p-3.5 sm:p-4 cursor-pointer text-xs sm:text-sm font-semibold text-slate-900 dark:text-white list-none select-none active:bg-slate-100 dark:active:bg-neutral-900">
-                    <span>{item.q}</span>
-                    <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform shrink-0 ml-2" />
-                  </summary>
-                  <div className="px-3.5 pb-3.5 sm:px-4 sm:pb-4 text-xs sm:text-sm text-slate-600 dark:text-neutral-400 leading-relaxed border-t border-slate-200/50 dark:border-neutral-800/50 pt-2.5">
-                    {item.a}
-                  </div>
-                </details>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── Kontak / CTA & Footer ── */}
-        <section
-          id="kontak"
-          className="snap-section py-10 sm:py-14 lg:py-0 lg:min-h-[calc(100vh-68px)] flex flex-col justify-between bg-slate-950 text-white scroll-mt-[68px]"
-        >
-          {/* CTA Area */}
-          <div className="py-8 sm:py-14 flex-1 flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full">
-            <h2 className="text-xl sm:text-3xl font-bold mb-2 sm:mb-3">Mulai Pengajuan Surat</h2>
-            <p className="text-xs sm:text-sm text-slate-400 mb-6 sm:mb-8 max-w-lg mx-auto leading-relaxed">
-              Isi formulir pengajuan untuk mendaftarkan permohonan Anda.
-              Anda akan menerima nomor registrasi untuk melacak status dokumen.
-            </p>
-            <Link
-              to="/guest/submit"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-xs sm:text-sm font-semibold text-slate-900 bg-white hover:bg-slate-100 active:scale-[0.98] rounded-lg transition-colors shadow-md"
-            >
-              Buka Formulir Pengajuan
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          {/* Footer */}
-          <footer className="w-full bg-slate-950 text-slate-400 pt-6 sm:pt-8 pb-6 border-t border-slate-800">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
-
-                <div>
-                  <div className="flex items-center gap-2.5 mb-2.5">
-                    <GarudaLogo className="w-7 h-7 sm:w-8 sm:h-8" />
-                    <div>
-                      <p className="text-[9px] sm:text-[10px] font-bold text-red-500 uppercase tracking-wider leading-none">Republik Indonesia</p>
-                      <p className="text-xs sm:text-sm font-bold text-white leading-tight">Portal e-Surat</p>
-                    </div>
-                  </div>
-                  <p className="text-xs leading-relaxed max-w-xs text-slate-400">
-                    Sistem pelayanan persuratan dan administrasi terpadu
-                    untuk pengelolaan naskah dinas secara elektronik.
-                  </p>
-                </div>
-
-                <div>
-                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-2.5">Navigasi</h4>
-                  <ul className="space-y-2 text-xs">
-                    <li><Link to="/guest" className="hover:text-white transition-colors py-1 inline-block">Beranda</Link></li>
-                    <li><Link to="/guest/submit" className="hover:text-white transition-colors py-1 inline-block">Form Pengajuan</Link></li>
-                    <li><Link to="/guest/track" className="hover:text-white transition-colors py-1 inline-block">Cek Status Surat</Link></li>
-                    <li><Link to="/login" className="hover:text-white transition-colors py-1 inline-block">Portal Administrator</Link></li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-2.5">Kontak &amp; Informasi</h4>
-                  <ul className="space-y-2 text-xs">
-                    <li className="flex items-center gap-2">
-                      <PhoneCall size={12} className="text-slate-500 shrink-0" />
-                      <span>(021) 1500-XXX</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <MapPin size={12} className="text-slate-500 shrink-0 mt-0.5" />
-                      <span>Jl. Medan Merdeka Barat No. 17, Jakarta Pusat</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Clock size={12} className="text-slate-500 shrink-0" />
-                      <span>Senin–Jumat, 08.00–16.00 WIB</span>
-                    </li>
-                  </ul>
-                </div>
-
-              </div>
-
-              <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-slate-500 text-center sm:text-left">
-                <div className="flex items-center gap-2">
-                  <FlagID className="w-5 h-3.5" />
-                  <span>&copy; {new Date().getFullYear()} Sistem Administrasi Terpadu. Hak cipta dilindungi.</span>
-                </div>
-              </div>
-            </div>
-          </footer>
-        </section>
-
-      </main>
-
-    </div>
-  );
+          <p className="hero-assurance"><ShieldCheck size={16} aria-hidden="true" /> Layanan persuratan tanpa biaya</p>
+        </div>
+        <CivicIllustration />
+      </section>
+      <div className="landing-service-bar"><div className="landing-shell service-bar-inner"><p><FileText aria-hidden="true" size={20} /><span><strong>Pengajuan secara online</strong> Akses formulir kapan pun Anda perlu</span></p><p><Search aria-hidden="true" size={20} /><span><strong>Proses dapat dipantau</strong> Gunakan NIK dan kode tracking Anda</span></p><p><Clock aria-hidden="true" size={20} /><span><strong>Jam pelayanan kantor</strong> Senin–Jumat, 08.00–16.00 WIB</span></p></div></div>
+      <section id="layanan" className="landing-section landing-shell" aria-labelledby="services-title">
+        <div className="section-heading"><div><p className="landing-eyebrow">Layanan Persuratan</p><h2 id="services-title">Apa yang Anda perlukan?</h2></div><p>Pilih kebutuhan Anda, lalu lengkapi pengajuan melalui formulir yang tersedia.</p></div>
+        <div className="landing-services">{services.map(({ title, description, icon: Icon }, index) => <Link to="/guest/submit" key={title} className="landing-service"><div className="service-top"><Icon size={27} strokeWidth={1.5} aria-hidden="true" /><span>0{index + 1}</span></div><h3>{title}</h3><p>{description}</p><span className="service-link">Ajukan permohonan <ArrowUpRight size={18} aria-hidden="true" /></span></Link>)}</div>
+      </section>
+      <section id="prosedur" className="landing-procedure" aria-labelledby="procedure-title"><div className="landing-shell landing-section"><div className="section-heading"><div><p className="landing-eyebrow">Alur Pelayanan</p><h2 id="procedure-title">Dari pengajuan hingga tindak lanjut.</h2></div><p>Empat langkah sederhana untuk mengurus kebutuhan persuratan Anda.</p></div><ol className="landing-steps">{steps.map(([title, description], index) => <li key={title}><span className="step-number">0{index + 1}</span><h3>{title}</h3><p>{description}</p></li>)}</ol><div className="tracking-note"><div><h3>Sudah mengirim pengajuan?</h3><p>Siapkan NIK dan kode tracking untuk melihat perkembangan surat Anda.</p></div><Link className="landing-text-link" to="/guest/track">Lacak status surat <ArrowRight size={18} aria-hidden="true" /></Link></div></div></section>
+      <section id="informasi" className="landing-section landing-shell landing-info" aria-labelledby="info-title"><div><p className="landing-eyebrow">Informasi Layanan</p><h2 id="info-title">Sebelum Anda<br />mengajukan surat.</h2><p className="info-intro">Pastikan data dan dokumen Anda lengkap agar permohonan dapat ditindaklanjuti.</p><div className="office-note"><Clock size={20} aria-hidden="true" /><p><strong>Waktu pelayanan</strong><br />Senin–Jumat<br />08.00–16.00 WIB</p></div></div><div className="landing-faq">{[
+        ['Apakah layanan ini berbayar?', 'Tidak. Layanan persuratan melalui portal ini tidak dipungut biaya.'],
+        ['Apa yang perlu saya siapkan?', 'Siapkan identitas, surat permohonan, dan lampiran yang sesuai dengan kebutuhan pengajuan. Ikuti petunjuk dokumen pada formulir.'],
+        ['Bagaimana cara melacak pengajuan?', 'Buka halaman Lacak Pengajuan, lalu masukkan NIK 16 digit dan kode tracking yang Anda terima setelah mengirim permohonan.'],
+        ['Apa yang dilakukan jika data belum sesuai?', 'Periksa kembali identitas dan lampiran sebelum mengirim. Setelah pengajuan terkirim, pantau status dan catatan tindak lanjut pada halaman pelacakan.'],
+      ].map(([question, answer]) => <details key={question}><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div></section>
+      <section className="landing-cta"><div className="landing-shell"><div><p className="landing-eyebrow">Pelayanan dalam genggaman</p><h2>Mulai dari satu pengajuan.</h2><p>Siapkan dokumen Anda. Kami bantu arahkan prosesnya.</p></div><Link className="landing-button primary" to="/guest/submit">Ajukan Surat <ArrowRight size={18} aria-hidden="true" /></Link></div></section>
+    </main>
+    <footer className="landing-footer"><div className="landing-shell footer-main"><div><Link to="/guest" className="footer-brand"><GarudaLogo className="w-10 h-10" /><span><small>Republik Indonesia</small><strong>Portal e-Surat</strong></span></Link><p>Portal pelayanan persuratan<br />dan administrasi terpadu.</p></div><div><h3>Akses layanan</h3><Link to="/guest/submit">Pengajuan surat</Link><Link to="/guest/track">Lacak pengajuan</Link><Link to="/login">Portal administrator</Link></div><div><h3>Kantor pelayanan</h3><p className="footer-address"><MapPin size={18} aria-hidden="true" />Jl. Medan Merdeka Barat No. 17,<br />Jakarta Pusat</p><p>Senin–Jumat, 08.00–16.00 WIB</p></div></div><div className="landing-shell footer-bottom"><span>© {new Date().getFullYear()} Portal e-Surat</span><span>Melayani dengan tertib dan transparan.</span></div></footer>
+  </div>;
 }

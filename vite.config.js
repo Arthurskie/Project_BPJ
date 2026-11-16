@@ -12,6 +12,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // Keep Three's core and WebGL renderer independently cacheable within the lazy scene.
+          if (id.includes('node_modules/three/build/three.core.js')) {
+            return 'three-core';
+          }
+          if (id.includes('node_modules/three/')) {
+            return 'three-renderer';
+          }
           if (
             id.includes('node_modules/react/') ||
             id.includes('node_modules/react-dom/') ||

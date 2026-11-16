@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import GuestNavbar from '../../components/GuestNavbar';
 import { GarudaLogo } from '../../components/IndonesiaSeal';
-import heroBg from '../../assets/hero-bg.jpg';
+import './landing.css';
+import './submit-letter.css';
 import submissionAPI from '../../services/submissionAPI';
 import letterTypeAPI from '../../services/letterTypeAPI';
 
@@ -171,36 +172,36 @@ const SubmitLetter = () => {
     });
   };
 
-  const inputClass =
-    'block w-full px-3.5 py-2.5 border border-slate-300 dark:border-neutral-700 rounded-lg text-base sm:text-sm bg-white dark:bg-neutral-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all';
+  const inputClass = 'submission-input';
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-neutral-950 text-slate-900 dark:text-neutral-100 font-sans flex flex-col">
+    <div className="landing-page submission-page min-h-screen flex flex-col">
       <GuestNavbar />
 
-      {/* Header */}
-      <section className="relative overflow-hidden bg-slate-900 no-print">
-        <div className="absolute inset-0">
-          <img src={heroBg} alt="" className="w-full h-full object-cover opacity-20" />
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 to-slate-900/95" />
-        </div>
-        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-14 text-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-            Formulir Pengajuan Surat
-          </h1>
-          <p className="text-sm text-slate-300 max-w-lg mx-auto">
-            Pelayanan persuratan online masyarakat tanpa perlu registrasi akun. Cukup isi NIK dan identitas resmi.
-          </p>
+      <a href="#submission-form" className="landing-skip no-print">Langsung ke formulir</a>
+      <section className="submission-intro no-print" aria-labelledby="submission-title">
+        <div className="submission-shell">
+          <Link to="/guest" className="submission-back">Beranda <span aria-hidden="true">/</span> Pengajuan surat</Link>
+          <p className="submission-eyebrow">Layanan Persuratan</p>
+          <h1 id="submission-title">Formulir pengajuan surat.</h1>
+          <p>Lengkapi identitas dan kebutuhan persuratan Anda. Setelah terkirim, simpan kode tracking untuk memantau pengajuan.</p>
         </div>
       </section>
 
       {/* Content */}
-      <main className="flex-1 pb-20">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20">
+      <main id="submission-form" className="submission-main flex-1" tabIndex={-1}>
+        <div className="submission-shell submission-layout">
 
-          {/* â”€â”€ Success / Tanda Terima â”€â”€ */}
+          <aside className="submission-guidance no-print" aria-label="Persiapan pengajuan">
+            <p className="submission-eyebrow">Sebelum mengirim</p>
+            <h2>Siapkan data Anda.</h2>
+            <ol><li>NIK 16 digit dan nama sesuai identitas.</li><li>Kontak yang dapat dihubungi.</li><li>Perihal dan dokumen pendukung, bila diperlukan.</li></ol>
+            <p>Lampiran PNG, JPG, PDF, DOC, atau DOCX maksimal 10 MB. Periksa kembali data sebelum mengirim.</p>
+            <Link to="/guest/track">Sudah mengajukan? Lacak surat <ArrowRight size={16} aria-hidden="true" /></Link>
+          </aside>
+
           {isSuccess && registrationData ? (
-            <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-sm overflow-hidden animate-fade-in print-only-container">
+            <div className="submission-card bg-white border border-slate-200 overflow-hidden print-only-container">
 
               {/* Success banner */}
               <div className="no-print bg-emerald-600 text-white px-6 py-3.5 flex items-center justify-between">
@@ -261,7 +262,7 @@ const SubmitLetter = () => {
                         ['Nama Lengkap', registrationData.nama],
                         ['Email', registrationData.email || '-'],
                         ['Telepon', registrationData.telepon || '-'],
-                        ['Asal Instansi', registrationData.alamat || '-'],
+                        ['Alamat Domisili', registrationData.alamat || '-'],
                         ['Jenis Surat', registrationData.jenisSurat],
                         ['Perihal', registrationData.perihal],
                         ['Lampiran Berkas', registrationData.fileName ? `${registrationData.fileName} (${registrationData.fileSize})` : 'Tidak ada lampiran'],
@@ -290,24 +291,24 @@ const SubmitLetter = () => {
               </div>
 
               {/* Actions */}
-              <div className="no-print bg-slate-50 dark:bg-neutral-800/60 px-4 sm:px-8 py-3.5 sm:py-4 border-t border-slate-200 dark:border-neutral-700 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3">
+              <div className="no-print bg-slate-50 px-4 sm:px-8 py-3.5 sm:py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3">
                 <button
                   onClick={() => navigate('/guest')}
-                  className="w-full sm:w-auto px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-colors text-center"
+                  className="w-full sm:w-auto px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors text-center"
                 >
                   â† Kembali ke Beranda
                 </button>
                 <div className="flex gap-2 w-full sm:w-auto">
                   <Link
                     to="/guest/track"
-                    className="flex-1 sm:flex-none px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-700 dark:text-white bg-white dark:bg-neutral-700 border border-slate-300 dark:border-neutral-600 rounded-lg hover:bg-slate-50 active:scale-[0.98] transition-colors flex items-center justify-center gap-1.5"
+                    className="flex-1 sm:flex-none px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 active:scale-[0.98] transition-colors flex items-center justify-center gap-1.5"
                   >
                     <Search size={14} />
                     Lacak Status
                   </Link>
                   <button
                     onClick={() => window.print()}
-                    className="flex-1 sm:flex-none px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-700 dark:text-white bg-white dark:bg-neutral-700 border border-slate-300 dark:border-neutral-600 rounded-lg hover:bg-slate-50 active:scale-[0.98] transition-colors flex items-center justify-center gap-1.5"
+                    className="flex-1 sm:flex-none px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 active:scale-[0.98] transition-colors flex items-center justify-center gap-1.5"
                   >
                     <Printer size={14} />
                     Cetak
@@ -324,36 +325,38 @@ const SubmitLetter = () => {
 
             </div>
           ) : (
-            /* â”€â”€ Form Pengajuan â”€â”€ */
-            <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-sm overflow-hidden animate-fade-in">
+            /* ── Form Pengajuan ── */
+            <div className="submission-card bg-white border border-slate-200 overflow-hidden">
+
 
               {/* Form header */}
-              <div className="px-4 sm:px-8 pt-5 sm:pt-7 pb-4 sm:pb-5 border-b border-slate-100 dark:border-neutral-800">
-                <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white mb-0.5 sm:mb-1">
+              <div className="px-4 sm:px-8 pt-5 sm:pt-7 pb-4 sm:pb-5 border-b border-slate-100 ">
+                <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-0.5 sm:mb-1">
                   Detail Pengajuan Surat
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-neutral-400">
+                <p className="text-xs sm:text-sm text-slate-500 ">
                   Kolom bertanda <span className="text-red-500 font-medium">*</span> wajib diisi dengan benar.
                 </p>
               </div>
 
               {errorMsg && (
-                <div className="mx-4 sm:mx-8 mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
+                <div role="alert" className="mx-4 sm:mx-8 mt-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2">
                   <AlertCircle size={16} className="shrink-0 mt-0.5" />
                   <span>{errorMsg}</span>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} noValidate>
+              <form onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
 <section className="p-5 border-b" aria-label="Persyaratan layanan"><h2 className="font-semibold">Persyaratan {formData.jenisSurat}</h2><ul className="list-disc pl-5 text-sm">{letterTypes.find(item => item.name === formData.jenisSurat)?.requirements.map(item => <li key={item}>{item}</li>)}</ul><p className="text-sm mt-2">Siapkan berkas sesuai persyaratan. Data demo tersimpan hanya pada browser ini.</p></section>
 {Object.keys(fieldErrors).length > 0 && <div role="alert" className="p-5 text-red-700"><h2>Periksa isian berikut:</h2>{Object.entries(fieldErrors).map(([key,value]) => <p key={key} id={'error-'+key}><a href={'#'+(key === 'keperluan' ? 'perihal' : key)}>{value}</a></p>)}</div>}
 {reviewing && <section className="p-5 border-2 border-red-700" aria-label="Tinjau permohonan"><h2 className="font-bold">Tinjau sebelum mengirim</h2><dl>{Object.entries({NIK:formData.nik,Nama:formData.nama,Alamat:formData.alamat,Layanan:formData.jenisSurat,Email:formData.email || 'Tidak dicantumkan',Telepon:formData.telepon || 'Tidak dicantumkan',Keperluan:formData.perihal,Keterangan:formData.keterangan || 'Tidak dicantumkan',Lampiran:fileName || 'Tidak ada'}).map(([key,value]) => <div key={key}><dt className="font-semibold">{key}</dt><dd>{value}</dd></div>)}</dl><button type="button" className="underline mt-3" onClick={() => setReviewing(false)}>Ubah isian</button></section>}
+
                 <div className="px-4 sm:px-8 py-5 sm:py-6 space-y-4 sm:space-y-5">
 
-                  {/* NIK (Wajib 16 digit) & Nama Lengkap */}
+                  <h3 className="submission-section-title"><span>01</span> Identitas pemohon</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="nik" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
+                      <label htmlFor="nik" className="block text-sm font-medium text-slate-700 mb-1.5">
                         Nomor Induk Kependudukan (NIK) <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -371,7 +374,7 @@ const SubmitLetter = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="nama" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
+                      <label htmlFor="nama" className="block text-sm font-medium text-slate-700 mb-1.5">
                         Nama Lengkap <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -392,6 +395,7 @@ const SubmitLetter = () => {
                     <div>
                       <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
                         Alamat Email (opsional)
+
                       </label>
                       <input
                         id="email"
@@ -404,7 +408,7 @@ const SubmitLetter = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="telepon" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
+                      <label htmlFor="telepon" className="block text-sm font-medium text-slate-700 mb-1.5">
                         Nomor WhatsApp / HP
                       </label>
                       <input
@@ -424,6 +428,7 @@ const SubmitLetter = () => {
                     <div>
                       <label htmlFor="alamat" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
                         Alamat Domisili <span className="text-red-500">*</span>
+
                       </label>
                       <input
                         id="alamat"
@@ -437,7 +442,7 @@ const SubmitLetter = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="jenisSurat" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
+                      <label htmlFor="jenisSurat" className="block text-sm font-medium text-slate-700 mb-1.5">
                         Jenis Surat <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -454,9 +459,9 @@ const SubmitLetter = () => {
                     </div>
                   </div>
 
-                  {/* Perihal */}
+                  <h3 className="submission-section-title"><span>02</span> Rincian permohonan</h3>
                   <div>
-                    <label htmlFor="perihal" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
+                    <label htmlFor="perihal" className="block text-sm font-medium text-slate-700 mb-1.5">
                       Perihal Surat <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -473,17 +478,17 @@ const SubmitLetter = () => {
 
                   {/* File Lampiran */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
-                      Lampiran Berkas Persyaratan <span className="text-slate-400 font-normal">(PDF / DOCX, maks. 10MB)</span>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Lampiran Berkas Persyaratan <span className="text-slate-400 font-normal">(PDF / DOC / DOCX, maks. 10 MB)</span>
                     </label>
                     {fileName ? (
-                      <div className="flex items-center justify-between px-4 py-3 border border-red-200 dark:border-red-900/40 rounded-lg bg-red-50 dark:bg-red-950/20">
+                      <div className="flex items-center justify-between px-4 py-3 border border-red-200 rounded-lg bg-red-50 ">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0">
-                            <Paperclip size={14} className="text-red-600 dark:text-red-400" />
+                          <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+                            <Paperclip size={14} className="text-red-600 " />
                           </div>
                           <div className="truncate">
-                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{fileName}</p>
+                            <p className="text-sm font-medium text-slate-900 truncate">{fileName}</p>
                             <p className="text-xs text-slate-500">{fileSize}</p>
                           </div>
                         </div>
@@ -491,7 +496,7 @@ const SubmitLetter = () => {
                           type="button"
                           aria-label="Hapus berkas lampiran"
                           onClick={clearFile}
-                          className="text-slate-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors shrink-0 ml-3"
+                          className="text-slate-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-100 transition-colors shrink-0 ml-3"
                         >
                           <X size={14} />
                         </button>
@@ -500,17 +505,19 @@ const SubmitLetter = () => {
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full group border-2 border-dashed border-slate-200 dark:border-neutral-700 rounded-lg px-4 py-7 text-center cursor-pointer hover:border-red-400 dark:hover:border-red-500/40 hover:bg-red-50/50 dark:hover:bg-red-950/10 transition-all"
+                        className="submission-upload group border-2 border-dashed border-slate-200 rounded-lg px-4 py-7 text-center cursor-pointer hover:border-red-400 hover:bg-red-50/50 transition-all"
+
                       >
-                        <div className="w-10 h-10 mx-auto mb-2.5 rounded-lg bg-slate-100 dark:bg-neutral-800 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 flex items-center justify-center transition-colors">
-                          <Upload size={18} className="text-slate-400 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
-                        </div>
-                        <p className="text-sm font-medium text-slate-600 dark:text-neutral-400 group-hover:text-red-700 dark:group-hover:text-red-300 transition-colors">
+                        <span className="w-10 h-10 mx-auto mb-2.5 rounded-lg bg-slate-100 group-hover:bg-red-100 flex items-center justify-center transition-colors">
+                          <Upload size={18} className="text-slate-400 group-hover:text-red-600 transition-colors" />
+                        </span>
+                        <span className="block text-sm font-medium text-slate-600 group-hover:text-red-700 transition-colors">
                           Pilih berkas lampiran pendukung
-                        </p>
-                        <p className="text-xs text-slate-400 mt-1">
+                        </span>
+                        <span className="block text-xs text-slate-400 mt-1">
                           Format: PNG, JPG, PDF, DOC, DOCX — Maksimal 10 MB
-                        </p>
+                        </span>
+
                       </button>
                     )}
                     <input
@@ -527,7 +534,7 @@ const SubmitLetter = () => {
 
                   {/* Catatan / Keterangan */}
                   <div>
-                    <label htmlFor="keterangan" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
+                    <label htmlFor="keterangan" className="block text-sm font-medium text-slate-700 mb-1.5">
                       Catatan / Keterangan Tambahan <span className="text-slate-400 font-normal">(opsional)</span>
                     </label>
                     <textarea
@@ -544,18 +551,18 @@ const SubmitLetter = () => {
                 </div>
 
                 {/* Form footer */}
-                <div className="px-4 sm:px-8 py-3.5 sm:py-4 border-t border-slate-100 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-950/50 flex flex-col-reverse sm:flex-row items-center justify-between gap-2.5 sm:gap-3">
+                <div className="px-4 sm:px-8 py-3.5 sm:py-4 border-t border-slate-100 bg-slate-50/50 flex flex-col-reverse sm:flex-row items-center justify-between gap-2.5 sm:gap-3">
                   <button
                     type="button"
                     onClick={() => navigate('/guest')}
-                    className="w-full sm:w-auto px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-colors text-center"
+                    className="w-full sm:w-auto px-5 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors text-center"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-2.5 text-xs sm:text-sm font-semibold text-white bg-red-700 hover:bg-red-800 active:scale-[0.98] rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
+                    className="submission-submit w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-2.5 text-xs sm:text-sm font-semibold text-white bg-red-700 hover:bg-red-800 active:scale-[0.98] rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
                   >
                     {isSubmitting ? (
                       <>
@@ -578,13 +585,13 @@ const SubmitLetter = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white dark:bg-neutral-900 border-t border-slate-200 dark:border-neutral-800 py-6 text-xs text-slate-500 dark:text-neutral-500 no-print">
+      <footer className="bg-white border-t border-slate-200 py-6 text-xs text-slate-500 no-print">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-2">
-          <p>&copy; {new Date().getFullYear()} Sistem Administrasi Terpadu</p>
+          <p>&copy; {new Date().getFullYear()} Portal e-Surat</p>
           <div className="flex gap-4">
-            <Link to="/guest" className="hover:text-slate-900 dark:hover:text-white transition-colors">Beranda</Link>
-            <Link to="/guest/track" className="hover:text-slate-900 dark:hover:text-white transition-colors">Cek Status</Link>
-            <Link to="/login" className="hover:text-slate-900 dark:hover:text-white transition-colors">Portal Petugas</Link>
+            <Link to="/guest" className="hover:text-slate-900 transition-colors">Beranda</Link>
+            <Link to="/guest/track" className="hover:text-slate-900 transition-colors">Cek Status</Link>
+            <Link to="/login" className="hover:text-slate-900 transition-colors">Portal Petugas</Link>
           </div>
         </div>
       </footer>

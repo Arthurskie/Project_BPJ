@@ -1,0 +1,52 @@
+/* Readable operational UI without changing the public page scale. */
+.admin-interface .text-xs { font-size: 0.875rem; line-height: 1.4rem; }
+.admin-interface .text-\[10px\],
+.admin-interface .text-\[11px\] { font-size: 0.75rem; line-height: 1.1rem; }
+.admin-interface .text-slate-400 { color: #64748b; }
+.dark .admin-interface .text-neutral-500 { color: #a3a3a3; }
+
+/* Admin design system: quiet surfaces, deliberate spacing, readable forms. */
+.admin-interface { background-color: #f6f7f9; }
+.admin-interface main { background-color: #f6f7f9; }
+.dark .admin-interface, .dark .admin-interface main { background-color: #0d0e10; }
+.admin-interface h1, .admin-interface h2 { letter-spacing: -0.025em; }
+.admin-interface .shadow-xs { box-shadow: none; }
+.admin-interface .rounded-2xl { border-radius: 0.75rem; }
+.admin-interface table { font-size: 0.875rem; }
+.admin-interface thead th { font-size: 0.75rem; font-weight: 600; text-transform: none; letter-spacing: normal; padding-top: 1rem; padding-bottom: 1rem; }
+.admin-interface tbody td { padding-top: 1.1rem; padding-bottom: 1.1rem; }
+.admin-interface input:not([type=checkbox]):not([type=radio]),
+.admin-interface select, .admin-interface textarea { min-height: 42px; }
+.admin-interface button { touch-action: manipulation; }
+.admin-interface button:not([role=switch]):not(:has(svg:only-child)) { min-height: 36px; }
+@media (max-width: 639px) {
+  .admin-interface table { min-width: 640px; }
+}
+
+
+/* Calm, coordinated sidebar motion: desktop width + mobile slide. */
+.admin-sidebar-motion {
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width 360ms cubic-bezier(.22,1,.36,1), transform 360ms cubic-bezier(.22,1,.36,1);
+}
+.admin-sidebar-motion .sidebar-collapse-label {
+  transition: opacity 180ms ease, transform 280ms ease, max-height 360ms ease;
+}
+@media (min-width: 1024px) {
+  .admin-sidebar-motion[data-open="false"] .sidebar-collapse-label {
+    opacity: 0;
+    transform: translateX(-8px);
+    max-height: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .admin-sidebar-motion[data-open="true"] .sidebar-collapse-label {
+    opacity: 1;
+    transform: translateX(0);
+    max-height: 100px;
+  }
+}
+
+.admin-interface :where(a, button, input, select, textarea):focus-visible { outline: 2px solid #b91c1c; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .admin-sidebar-motion, .admin-sidebar-motion .sidebar-collapse-label { transition: none; } }
