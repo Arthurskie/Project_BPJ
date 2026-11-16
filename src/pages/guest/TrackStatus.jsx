@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Search, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import GuestNavbar from '../../components/GuestNavbar';
 import heroBg from '../../assets/hero-bg.jpg';
 import submissionAPI from '../../services/submissionAPI';
 
 export default function TrackStatus() {
+  const [searchParams] = useSearchParams();
   const [nik, setNik] = useState('');
-  const [trackingCode, setTrackingCode] = useState('');
+  const [trackingCode, setTrackingCode] = useState(() => searchParams.get('code') || '');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -86,11 +87,13 @@ export default function TrackStatus() {
           <form onSubmit={handleTrack} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
+                <label htmlFor="track-nik" className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
                   Nomor Induk Kependudukan (NIK) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
+                  id="track-nik"
+                  inputMode="numeric"
                   maxLength={16}
                   required
                   value={nik}
@@ -101,12 +104,13 @@ export default function TrackStatus() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
+                <label htmlFor="track-code" className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
                   Kode Tracking Surat <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
+                  id="track-code"
                   value={trackingCode}
                   onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
                   placeholder="Contoh: SRT-20261112-001"
@@ -116,7 +120,7 @@ export default function TrackStatus() {
             </div>
 
             {errorMsg && (
-              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-start gap-2 animate-fade-in">
+              <div role="alert" className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-start gap-2 animate-fade-in">
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
                 <span>{errorMsg}</span>
               </div>
@@ -133,6 +137,7 @@ export default function TrackStatus() {
           </form>
         </div>
 
+<p role="status" aria-live="polite" className="sr-only">{loading ? 'Mencari data permohonan...' : result ? 'Data permohonan ditemukan.' : ''}</p>
         {/* Result Card */}
         {result && (
           <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl p-6 sm:p-8 shadow-lg animate-fade-in">

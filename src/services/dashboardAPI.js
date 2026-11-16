@@ -30,8 +30,8 @@ export const dashboardAPI = {
         processingSubmissions: diproses,
         completedSubmissions: selesai,
         rejectedSubmissions: ditolak,
-        averageProcessHours: 4.8,
-        satisfactionRate: '98.4%'
+        averageProcessHours: (() => { const issued = submissions.filter(row => row.status === 'selesai' && row.verifiedAt && row.createdAt); return issued.length ? Math.round(issued.reduce((sum,row) => sum + Math.max(0,new Date(row.verifiedAt)-new Date(row.createdAt))/3600000,0)/issued.length*10)/10 : null; })(),
+        satisfactionRate: 'Belum diukur'
       }
     };
   },
@@ -47,16 +47,9 @@ export const dashboardAPI = {
       // fallback
     }
 
-    const submissions = localDB.getSubmissions();
-    const activities = submissions.slice(0, 5).map((item) => ({
-      id: item.id,
-      title: `${item.jenisSurat} - ${item.nama}`,
-      description: `Status: ${item.status.toUpperCase()} (${item.trackingCode})`,
-      time: new Date(item.updatedAt || item.createdAt).toLocaleTimeString('id-ID', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
-      type: item.status
+    const activities = [...localDB.getAuditLogs()].sort((a,b) => b.timestamp.localeCompare(a.timestamp)).slice(0,5).map(item => ({
+      id:item.id, title:item.action + ' · ' + item.adminName,
+      description:item.details, time:new Date(item.timestamp).toLocaleString('id-ID'), type:item.action
     }));
 
     return {

@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
-const ThemeContext = createContext();
+import { ThemeContext } from './useTheme.js';
 
 export function ThemeProvider({ children }) {
   const [darkMode, setDarkMode] = useState(() => {
@@ -35,10 +35,4 @@ export function ThemeProvider({ children }) {
   );
 }
 
-export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
-}
+

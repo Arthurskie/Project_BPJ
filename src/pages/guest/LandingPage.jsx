@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowRight,
   ChevronDown,
@@ -19,13 +19,14 @@ export default function LandingPage() {
   const [activeSection, setActiveSection] = useState('beranda');
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
-  const [trackingResult, setTrackingResult] = useState(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
   const heroRef = useRef(null);
+  const initialNavigation = useRef(true);
 
-  const getHeaderOffset = () => 68;
+  const getHeaderOffset = () => document.querySelector('[data-guest-navbar]')?.getBoundingClientRect().height || 68;
 
-  const scrollToSection = (e, id) => {
+  const scrollToSection = useCallback((e, id, immediate = false) => {
     if (e) e.preventDefault();
     setActiveSection(id);
     window.dispatchEvent(new CustomEvent('nav-gliding'));
@@ -33,7 +34,7 @@ export default function LandingPage() {
     if (id === 'beranda') {
       window.scrollTo({
         top: 0,
-        behavior: 'smooth'
+        behavior: immediate || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
       });
       return;
     }
@@ -47,32 +48,31 @@ export default function LandingPage() {
 
       window.scrollTo({
         top: Math.max(0, Math.round(offsetPosition)),
-        behavior: 'smooth'
+        behavior: immediate || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
       });
     });
-  };
-
-  // Selalu reset posisi scroll ke puncak (Beranda) saat refresh halaman
-  useEffect(() => {
-    if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
-    }
-
-    if (window.scrollY > 0) {
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    }
-
-    if (window.location.hash) {
-      window.history.replaceState(null, '', window.location.pathname);
-    }
-
-    const handleBeforeUnload = () => {
-      window.scrollTo(0, 0);
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
+
+  useEffect(() => {
+    const isReload = initialNavigation.current && performance.getEntriesByType('navigation')[0]?.type === 'reload';
+    const destination = isReload ? null : location.state?.section;
+    const previousRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = 'manual';
+    let secondFrame;
+    const frame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        initialNavigation.current = false;
+        // Consume the section instruction without creating another history entry.
+        if (window.history.state?.usr?.section) {
+          const { section: _section, ...remainingState } = window.history.state.usr;
+          window.history.replaceState({ ...window.history.state, usr: remainingState }, '');
+        }
+        if (destination) scrollToSection(null, destination, true);
+        else window.scrollTo({ top: 0, behavior: 'instant' });
+      });
+    });
+    return () => { cancelAnimationFrame(frame); cancelAnimationFrame(secondFrame); window.history.scrollRestoration = previousRestoration; };
+  }, [location.key, location.state?.section, scrollToSection]);
 
   // Deteksi seksi aktif secara non-blocking menggunakan requestAnimationFrame
   useEffect(() => {
@@ -119,21 +119,24 @@ export default function LandingPage() {
     };
   }, []);
 
-  const handleTrack = (e) => {
-    e?.preventDefault();
-    if (!trackingCode.trim()) return;
-    setIsSearching(true);
-    setTimeout(() => {
-      setIsSearching(false);
-      setTrackingResult({
-        kode: trackingCode.toUpperCase(),
-        perihal: 'Permohonan Audiensi Pembahasan Program Kerja',
-        pemohon: 'Bambang Sudrajat',
-        tanggal: '28 Oktober 2026',
-        tahap: 3,
-        status: 'Disposisi Pimpinan',
+  useEffect(() => {
+    if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const targets = [...document.querySelectorAll('.snap-section:not(#beranda) > div')];
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-revealed');
+          observer.unobserve(entry.target);
+        }
       });
-    }, 600);
+    }, { threshold: 0.08, rootMargin: '0px 0px -24px 0px' });
+    targets.forEach(target => { target.classList.add('landing-reveal'); observer.observe(target); });
+    return () => { observer.disconnect(); targets.forEach(target => target.classList.remove('landing-reveal', 'is-revealed')); };
+  }, []);
+
+  const handleTrack = (e) => {
+    e.preventDefault();
+    navigate('/guest/track?code=' + encodeURIComponent(trackingCode.trim().toUpperCase()));
   };
 
   return (
@@ -249,6 +252,7 @@ export default function LandingPage() {
               <form onSubmit={handleTrack} className="flex gap-2">
                 <input
                   type="text"
+                  aria-label="Nomor registrasi surat"
                   value={trackingCode}
                   onChange={(e) => setTrackingCode(e.target.value)}
                   placeholder="Masukkan nomor registrasi"
@@ -256,41 +260,14 @@ export default function LandingPage() {
                 />
                 <button
                   type="submit"
-                  disabled={isSearching}
                   className="px-3.5 sm:px-5 py-2 sm:py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-red-700 dark:hover:bg-red-800 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50 active:scale-[0.98] cursor-pointer"
                 >
                   <Search size={14} className="shrink-0" />
-                  <span>{isSearching ? 'Mencari...' : 'Lacak'}</span>
+                  <span>Lacak</span>
                 </button>
               </form>
 
-              {trackingResult && (
-                <div className="mt-3.5 pt-3.5 border-t border-slate-200 dark:border-neutral-800 animate-fade-in">
-                  <div className="flex items-start justify-between gap-2 mb-2.5">
-                    <div className="min-w-0">
-                      <span className="text-[10px] sm:text-[11px] font-mono font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/40 px-2 py-0.5 rounded">
-                        {trackingResult.kode}
-                      </span>
-                      <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white mt-1 truncate">
-                        {trackingResult.perihal}
-                      </h4>
-                      <p className="text-[11px] text-slate-500 mt-0.5 truncate">
-                        {trackingResult.pemohon} &bull; {trackingResult.tanggal}
-                      </p>
-                    </div>
-                    <span className="text-[10px] sm:text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md shrink-0">
-                      Tahap {trackingResult.tahap}/4
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-1 text-[9px] sm:text-[10px] font-semibold text-center">
-                    <div className="bg-emerald-600 text-white py-1 rounded truncate px-0.5">Registrasi</div>
-                    <div className="bg-emerald-600 text-white py-1 rounded truncate px-0.5">Verifikasi</div>
-                    <div className="bg-amber-500 text-white py-1 rounded truncate px-0.5">Disposisi</div>
-                    <div className="bg-slate-200 dark:bg-neutral-800 text-slate-500 py-1 rounded truncate px-0.5">Selesai</div>
-                  </div>
-                </div>
-              )}
+<p className="mt-3 text-xs text-slate-500 dark:text-neutral-400">Lanjutkan ke halaman pelacakan dan masukkan NIK untuk memeriksa status.</p>
             </div>
           </div>
         </section>

@@ -1,3 +1,4 @@
+﻿import DocumentPreview from '../../components/DocumentPreview';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
@@ -19,22 +20,23 @@ import {
 import submissionAPI from '../../services/submissionAPI';
 import auditLogAPI from '../../services/auditLogAPI';
 import letterGeneratorAPI from '../../services/letterGeneratorAPI';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/useAuth';
 import { Skeleton, Spinner } from '../../components/Loading';
 import Alert from '../../components/Alert';
 import ConfirmModal from '../../components/ConfirmModal';
 
-const OFFICIALS = [
-  { name: 'Budi Santoso, S.STP', nip: '198503152010011002', role: 'Lurah Cikarang' },
-  { name: 'Dra. Hj. Maryati, M.Si', nip: '197904122005012003', role: 'Sekretaris Kelurahan' },
-  { name: 'Ahmad Zaelani, S.AP', nip: '199002172014031001', role: 'Kepala Seksi Pelayanan Umum' }
-];
+import { OFFICIALS } from '../../domain/officials.js';
 
 export default function SubmissionDetail() {
   const { id } = useParams();
+  return <SubmissionDetailContent key={id} id={id} />;
+}
+
+function SubmissionDetailContent({ id }) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const [previewFile, setPreviewFile] = useState(null);
   const [submission, setSubmission] = useState(null);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ export default function SubmissionDetail() {
   const [alert, setAlert] = useState(null);
 
   // Form Verifikasi
-  const [statusAction, setStatusAction] = useState('selesai'); // 'selesai' | 'ditolak'
+  const [statusAction, setStatusAction] = useState(''); // Decision requires explicit selection.
   const [nomorSurat, setNomorSurat] = useState('');
   const [pejabatTTD, setPejabatTTD] = useState(OFFICIALS[0].name);
   const [catatanVerifikasi, setCatatanVerifikasi] = useState('');
@@ -51,38 +53,47 @@ export default function SubmissionDetail() {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
 
   // Load Data Permohonan & Audit Log
-  const loadData = async () => {
+  const [revision, setRevision] = useState(0);
+  const loadData = () => {
     setLoading(true);
-    try {
-      const res = await submissionAPI.getSubmissionById(id);
-      if (res.success && res.data) {
-        setSubmission(res.data);
-        if (res.data.nomorSurat) setNomorSurat(res.data.nomorSurat);
-        if (res.data.pejabatTTD) setPejabatTTD(res.data.pejabatTTD);
-        if (res.data.catatanVerifikasi) setCatatanVerifikasi(res.data.catatanVerifikasi);
-
-        // Ambil riwayat audit untuk permohonan ini
-        const logsRes = await auditLogAPI.getLogsByTarget(res.data.trackingCode);
-        if (logsRes.success) {
-          setLogs(logsRes.data || []);
-        }
-      }
-    } catch (err) {
-      setAlert({
-        type: 'error',
-        message: err.message || 'Gagal memuat data permohonan surat.'
-      });
-    } finally {
-      setLoading(false);
-    }
+    setRevision(value => value + 1);
   };
 
   useEffect(() => {
-    loadData();
-  }, [id]);
+    let active = true;
+    const load = async () => {
+      try {
+        const res = await submissionAPI.getSubmissionById(id);
+        if (!active) return;
+        if (res.success && res.data) {
+          setSubmission(res.data);
+          if (res.data.nomorSurat) setNomorSurat(res.data.nomorSurat);
+          if (res.data.pejabatTTD) setPejabatTTD(res.data.pejabatTTD);
+          if (res.data.catatanVerifikasi) setCatatanVerifikasi(res.data.catatanVerifikasi);
+
+          // Ambil riwayat audit untuk permohonan ini
+          const logsRes = await auditLogAPI.getLogsByTarget(res.data.trackingCode);
+          if (active && logsRes.success) {
+            setLogs(logsRes.data || []);
+          }
+        }
+      } catch (err) {
+        if (!active) return;
+        setAlert({
+          type: 'error',
+          message: err.message || 'Gagal memuat data permohonan surat.'
+        });
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    load();
+    return () => { active = false; };
+  }, [id, revision]);
 
   // Validasi real-time duplikasi nomor surat
   useEffect(() => {
+    let active = true;
     const checkDuplicate = async () => {
       if (!nomorSurat || !nomorSurat.trim() || !submission) {
         setIsDuplicateNumber(false);
@@ -90,14 +101,17 @@ export default function SubmissionDetail() {
       }
       try {
         const res = await submissionAPI.validateLetterNumber(nomorSurat, submission.id);
-        setIsDuplicateNumber(res.isDuplicate);
+        if (active) setIsDuplicateNumber(res.isDuplicate);
       } catch {
-        setIsDuplicateNumber(false);
+        if (active) setIsDuplicateNumber(false);
       }
     };
 
     const timer = setTimeout(checkDuplicate, 400);
-    return () => clearTimeout(timer);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [nomorSurat, submission]);
 
   // Auto-generate nomor surat resmi
@@ -119,6 +133,7 @@ export default function SubmissionDetail() {
   // Trigger modal konfirmasi
   const handleSubmitPrompt = (e) => {
     e.preventDefault();
+    if (!statusAction) { setAlert({type: "error", message: "Pilih keputusan terlebih dahulu."}); return; }
     if (statusAction === 'selesai') {
       if (!nomorSurat.trim()) {
         setAlert({ type: 'error', message: 'Nomor Surat Resmi wajib diisi sebelum menyetujui surat.' });
@@ -347,7 +362,7 @@ export default function SubmissionDetail() {
         <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl overflow-hidden shadow-xs">
           <div className="px-5 py-3.5 bg-slate-50/70 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-800 flex items-center gap-2">
             <User className="w-4 h-4 text-slate-700 dark:text-neutral-300" />
-            <h3 className="text-xs font-bold text-slate-800 dark:text-neutral-200 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">
               Data Pemohon & Berkas Pengajuan
             </h3>
           </div>
@@ -404,6 +419,7 @@ export default function SubmissionDetail() {
               </div>
             </div>
 
+            <section className="pb-4 border-b border-slate-100 dark:border-neutral-800" aria-label="Informasi tambahan pengajuan"><h4 className="font-semibold mb-2">Informasi tambahan</h4><dl className="space-y-2"><div><dt>Email pemohon</dt><dd>{submission.email || 'Tidak dicantumkan'}</dd></div><div><dt>Keterangan warga</dt><dd className="whitespace-pre-wrap">{submission.keterangan || 'Tidak dicantumkan'}</dd></div><div><dt>Sumber pengajuan</dt><dd>{submission.source === 'walk-in' ? 'Loket langsung' : 'Formulir warga'}</dd></div></dl>{submission.letterTypeSnapshot && <div className="mt-3"><h4 className="font-semibold">Persyaratan saat diajukan ({submission.letterTypeSnapshot.code})</h4><ul className="list-disc pl-4">{submission.letterTypeSnapshot.requirements.map(item => <li key={item}>{item}</li>)}</ul></div>}</section>
             {/* Berkas Lampiran Syarat */}
             <div>
               <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500 uppercase tracking-wider block mb-2">
@@ -423,7 +439,8 @@ export default function SubmissionDetail() {
                         </span>
                       </div>
                       <span className="text-[10px] text-slate-400 shrink-0">
-                        {file.size ? `${(file.size / 1024).toFixed(0)} KB` : 'Dokumen'}
+                        <button type="button" onClick={() => setPreviewFile(file)} className="mr-3 text-xs font-medium text-red-700 underline dark:text-red-400">Pratinjau Dokumen</button>
+                          {file.size ? `${(file.size / 1024).toFixed(0)} KB` : 'Dokumen'}
                       </span>
                     </div>
                   ))}
@@ -455,11 +472,11 @@ export default function SubmissionDetail() {
           <div className="px-5 py-3.5 bg-slate-50/70 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileCheck2 className="w-4 h-4 text-red-700 dark:text-red-400" />
-              <h3 className="text-xs font-bold text-slate-800 dark:text-neutral-200 uppercase tracking-wider">
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">
                 Panel Verifikasi & Keputusan
               </h3>
             </div>
-            <span className="text-[11px] font-mono text-slate-400">RBAC: Petugas / Admin</span>
+            
           </div>
 
           <form onSubmit={handleSubmitPrompt} className="p-5 space-y-4 text-xs">
@@ -608,7 +625,7 @@ export default function SubmissionDetail() {
               </Link>
               <button
                 type="submit"
-                disabled={submitting || (statusAction === 'selesai' && isDuplicateNumber)}
+                disabled={!statusAction || submitting || (statusAction === 'selesai' && isDuplicateNumber)}
                 className={`px-5 py-2 rounded-lg font-semibold text-white shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 ${
                   statusAction === 'ditolak'
                     ? 'bg-red-700 hover:bg-red-800'
@@ -621,7 +638,7 @@ export default function SubmissionDetail() {
                   <Send className="w-3.5 h-3.5" />
                 )}
                 <span>
-                  {statusAction === 'ditolak' ? 'Konfirmasi Tolak Permohonan' : 'Setujui & Terbitkan Surat'}
+                  {!statusAction ? 'Pilih keputusan terlebih dahulu' : statusAction === 'ditolak' ? 'Konfirmasi Tolak Permohonan' : 'Setujui & Terbitkan Surat'}
                 </span>
               </button>
             </div>
@@ -634,7 +651,7 @@ export default function SubmissionDetail() {
         <div className="px-5 py-3.5 bg-slate-50/70 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <History className="w-4 h-4 text-slate-700 dark:text-neutral-300" />
-            <h3 className="text-xs font-bold text-slate-800 dark:text-neutral-200 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">
               Audit Trail & Riwayat Aktivitas Permohonan
             </h3>
           </div>
@@ -674,6 +691,7 @@ export default function SubmissionDetail() {
         </div>
       </div>
 
+      {previewFile && <DocumentPreview key={previewFile.storageId || previewFile.name} file={previewFile} onClose={() => setPreviewFile(null)} />}
       {/* Modal Dialog Konfirmasi Aksi */}
       <ConfirmModal
         isOpen={confirmModalOpen}
@@ -693,4 +711,7 @@ export default function SubmissionDetail() {
     </div>
   );
 }
+
+
+
 

@@ -1,3 +1,4 @@
+import { commitSubmissionAudit } from '../domain/localCommit.js';
 /**
  * Base API Client & Persistent Data Layer
  * 
@@ -7,7 +8,8 @@
  * 100% mandiri (Full Client-Side / Standalone) tanpa perlu menjalankan folder server terpisah.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || null;
+export const IS_DEMO = (import.meta.env.VITE_APP_MODE || 'demo') === 'demo';
+const API_BASE_URL = IS_DEMO ? null : import.meta.env.VITE_API_BASE_URL || null;
 
 // Initial Seeds untuk LocalStorage jika belum ada data
 const STORAGE_KEYS = {
@@ -94,29 +96,6 @@ const DEFAULT_SUBMISSIONS = [
   }
 ];
 
-const DEFAULT_AUDIT_LOGS = [
-  {
-    id: 'log-001',
-    adminId: 'usr-001',
-    adminName: 'Budi Santoso, S.STP',
-    action: 'verify_submission',
-    targetId: 'sub-003',
-    targetType: 'submission',
-    details: 'Menyetujui permohonan SKTM dan menerbitkan nomor surat 470 / 001 / KEL.CKR / XI / 2026',
-    timestamp: new Date(Date.now() - 86400000).toISOString()
-  },
-  {
-    id: 'log-002',
-    adminId: 'usr-002',
-    adminName: 'Siti Rahmawati, S.Sos',
-    action: 'update_status',
-    targetId: 'sub-002',
-    targetType: 'submission',
-    details: 'Mengubah status permohonan menjadi diproses untuk verifikasi tanda tangan',
-    timestamp: new Date(Date.now() - 14400000).toISOString()
-  }
-];
-
 const DEFAULT_LETTER_NUMBERS = [
   {
     id: 'ln-001',
@@ -149,18 +128,16 @@ export const localDB = {
   getSubmissions: () => {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SUBMISSIONS);
-      if (!data) {
-        localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(DEFAULT_SUBMISSIONS));
-        return DEFAULT_SUBMISSIONS;
-      }
-      return JSON.parse(data);
-    } catch {
-      return DEFAULT_SUBMISSIONS;
-    }
+      if (!data) return structuredClone(DEFAULT_SUBMISSIONS);
+      const rows = JSON.parse(data);
+      if (!Array.isArray(rows)) throw new Error();
+      return rows;
+    } catch { throw new Error('Data permohonan tidak dapat dibaca. Jangan hapus data browser; hubungi administrator.'); }
   },
 
   saveSubmissions: (submissions) => {
-    localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(submissions));
+    try { localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(submissions)); }
+    catch { throw new Error('Permohonan gagal disimpan. Periksa kapasitas penyimpanan dan izin browser, lalu coba lagi.'); }
   },
 
   getSession: () => {
@@ -183,14 +160,14 @@ export const localDB = {
   getAuditLogs: () => {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS);
-      if (!data) {
-        localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(DEFAULT_AUDIT_LOGS));
-        return DEFAULT_AUDIT_LOGS;
-      }
-      return JSON.parse(data);
-    } catch {
-      return DEFAULT_AUDIT_LOGS;
-    }
+      const logs = data === null ? [] : JSON.parse(data);
+      if (!Array.isArray(logs)) throw new Error();
+      return logs;
+    } catch { throw new Error('Data audit tidak dapat dibaca. Data tidak diubah.'); }
+  },
+  saveSubmissionWithAudit: (submissions, action) => {
+    const entry = { id: crypto.randomUUID(), timestamp: new Date().toISOString(), targetType: 'submission', ...action };
+    commitSubmissionAudit(localStorage, {submissionsKey:STORAGE_KEYS.SUBMISSIONS,auditKey:STORAGE_KEYS.AUDIT_LOGS,submissions,entry});
   },
 
   saveAuditLogs: (logs) => {

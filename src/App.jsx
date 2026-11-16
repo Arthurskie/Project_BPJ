@@ -4,7 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import { PageLoader } from './components/Loading';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { FormProvider } from './contexts/FormContext';
+
 import { AuthProvider } from './contexts/AuthContext';
 
 // Eager load LandingPage for instant initial render
@@ -38,7 +38,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <FormProvider>
+
             <Suspense fallback={<PageLoader text="Memuat sistem..." fullScreen={false} />}>
               <Routes>
                 {/* Guest / Public Routes */}
@@ -74,7 +74,7 @@ function App() {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
-          </FormProvider>
+
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
@@ -82,3 +82,4 @@ function App() {
 }
 
 export default App;
+

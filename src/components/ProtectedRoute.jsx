@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { PageLoader } from './Loading';
 
 /**
@@ -13,8 +13,8 @@ export default function ProtectedRoute({ allowedRoles }) {
   if (loading) {
     return (
       <PageLoader
-        text="Memverifikasi hak akses petugas..."
-        subtext="Menghubungkan ke sistem otentikasi aman"
+        text="Memuat halaman..."
+        
       />
     );
   }

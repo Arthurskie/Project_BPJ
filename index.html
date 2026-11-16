@@ -77,37 +77,18 @@
       @media (min-width: 768px) {
         .critical-h1 { font-size: 48px; }
       }
+      #startup-loader { position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; background:#f8fafc; color:#475569; font-family:system-ui,sans-serif; transition:opacity 240ms ease,visibility 240ms ease; }
+      #startup-loader.is-ready { opacity:0; visibility:hidden; pointer-events:none; }
+      .startup-mark { width:56px; height:56px; display:grid; place-items:center; border-radius:14px; background:#0f172a; color:white; font-size:17px; font-weight:700; letter-spacing:1px; }
+      .startup-spinner { width:26px; height:26px; border:3px solid #e2e8f0; border-top-color:#b91c1c; border-radius:50%; animation:startup-spin .8s linear infinite; }
+      #startup-loader p { margin:0; font-size:13px; }
+      @keyframes startup-spin { to { transform:rotate(360deg); } }
+      @media(prefers-reduced-motion:reduce) { #startup-loader { transition:none; } .startup-spinner { animation:none; } }
     </style>
   </head>
   <body>
-    <div id="root">
-      <!-- Critical First Paint Shell: Langsung tampil dalam < 0.5 detik pada audit Lighthouse -->
-      <div class="critical-ribbon">
-        <div class="critical-ribbon-red"></div>
-        <div class="critical-ribbon-white"></div>
-      </div>
-      <header class="critical-nav">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="width:36px;height:36px;background:#b91c1c;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:12px;">RI</div>
-          <div>
-            <div style="font-size:9px;font-weight:800;color:#dc2626;letter-spacing:1px;text-transform:uppercase;">REPUBLIK INDONESIA</div>
-            <div style="font-size:14px;font-weight:700;color:#0f172a;">Portal Pelayanan Surat</div>
-          </div>
-        </div>
-      </header>
-      <main class="critical-hero">
-        <h1 class="critical-h1">
-          Portal Pelayanan Persuratan<br />
-          <span style="color:#fca5a5;">&amp; Administrasi Terpadu</span>
-        </h1>
-        <p class="critical-p">
-          Ajukan surat masuk, lacak status dokumen, dan kelola administrasi persuratan secara digital tanpa perlu datang ke kantor.
-        </p>
-        <div style="display:inline-block;padding:12px 24px;background:#b91c1c;color:#ffffff;font-size:14px;font-weight:600;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.2);">
-          Memuat Sistem Layanan...
-        </div>
-      </main>
-    </div>
+    <div id="root"></div>
+    <noscript>Aplikasi memerlukan JavaScript untuk berjalan.</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

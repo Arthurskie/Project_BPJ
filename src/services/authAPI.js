@@ -126,10 +126,7 @@ export const authAPI = {
       throw new Error('Email atau NIP kedinasan tidak terdaftar.');
     }
 
-    return {
-      success: true,
-      message: `Tautan reset kata sandi telah dikirimkan ke alamat email ${user.email}. Silakan periksa kotak masuk atau spam.`
-    };
+    throw new Error('Demo tidak mengirim email reset. Gunakan akun demo atau hubungi pengelola presentasi.');
   },
 
   /**

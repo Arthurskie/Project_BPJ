@@ -1,14 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
-const FormContext = createContext();
+import { FormContext } from './useFormContext.js';
 
-export function useFormContext() {
-  const context = useContext(FormContext);
-  if (!context) {
-    throw new Error('useFormContext must be used within a FormProvider');
-  }
-  return context;
-}
+
 
 export function FormProvider({ children }) {
   // Try to load forms from localStorage, otherwise use initial dummy data

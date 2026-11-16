@@ -1,123 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, FileText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useFormContext } from '../../contexts/FormContext';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Pencil, Trash2 } from 'lucide-react';
+import letterTypeAPI from '../../services/letterTypeAPI';
 
 export default function Forms() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filteredForms, setFilteredForms] = useState([]);
-  const searchInputRef = useRef(null);
-
-  const navigate = useNavigate();
-  const { forms: allForms } = useFormContext();
-
-  useEffect(() => {
-    if (searchInputRef.current && window.innerWidth >= 768) {
-      searchInputRef.current.focus();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredForms(allForms);
-    } else {
-      const lowercasedQuery = searchQuery.toLowerCase();
-      const filtered = allForms.filter(
-        (form) =>
-          form.name.toLowerCase().includes(lowercasedQuery) ||
-          form.status.toLowerCase().includes(lowercasedQuery)
-      );
-      setFilteredForms(filtered);
-    }
-  }, [searchQuery, allForms]);
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-neutral-800">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Template & Formulir Surat
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
-            Kelola master formulir persyaratan permohonan surat dinas kelurahan.
-          </p>
-        </div>
-        <button
-          onClick={() => navigate('/admin/forms/new')}
-          className="inline-flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer w-full sm:w-auto justify-center"
-        >
-          <Plus size={15} />
-          <span>Buat Template Baru</span>
-        </button>
-      </div>
-
-      <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-xs p-4 sm:p-5">
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-5">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Cari berdasarkan nama formulir atau status..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-white placeholder:text-slate-400 rounded-lg pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-red-600 transition-colors"
-            />
-          </div>
-        </div>
-
-        {/* List of Forms */}
-        {filteredForms.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {filteredForms.map((form) => (
-              <div
-                key={form.id}
-                className="p-4 border border-slate-200 dark:border-neutral-800 rounded-xl bg-white dark:bg-neutral-900 hover:border-slate-300 dark:hover:border-neutral-700 transition-colors shadow-xs"
-              >
-                <div className="flex justify-between items-start mb-2.5">
-                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 dark:text-neutral-300">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        form.status === 'Active'
-                          ? 'bg-emerald-500'
-                          : form.status === 'Draft'
-                          ? 'bg-amber-500'
-                          : 'bg-slate-400'
-                      }`}
-                    />
-                    {form.status === 'Active' ? 'Aktif' : form.status === 'Draft' ? 'Draf' : form.status}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 rounded">
-                    {form.responses} respons
-                  </span>
-                </div>
-                <h3 className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white leading-snug">
-                  {form.name}
-                </h3>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-12 px-4 text-center border border-dashed border-slate-200 dark:border-neutral-800 rounded-xl bg-slate-50 dark:bg-neutral-950">
-            <div className="w-10 h-10 bg-white dark:bg-neutral-900 rounded-lg flex items-center justify-center mb-3 shadow-xs border border-slate-200 dark:border-neutral-800">
-              <FileText className="text-slate-400 w-5 h-5" />
-            </div>
-            <h3 className="text-xs font-bold text-slate-900 dark:text-white mb-1">
-              Template Tidak Ditemukan
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-neutral-400 max-w-sm mb-4">
-              Tidak ada formulir yang cocok dengan kata kunci "{searchQuery}".
-            </p>
-            <button
-              onClick={() => setSearchQuery('')}
-              className="text-xs text-red-700 dark:text-red-400 font-semibold hover:underline cursor-pointer"
-            >
-              Hapus Filter Pencarian
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  const [loaded] = useState(() => { try { return { items: letterTypeAPI.getAll(), error: '' }; } catch (err) { return { items: [], error: err.message }; } });
+  const [error, setError] = useState(loaded.error);
+  const [items, setItems] = useState(loaded.items);
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState('all');
+  const [notice, setNotice] = useState('');
+  const filtered = items.filter(item => `${item.code} ${item.name}`.toLowerCase().includes(query.toLowerCase()) && (status === 'all' || item.active === (status === 'active')));
+  const remove = (item) => {
+    if (!window.confirm(`Hapus jenis surat "${item.name}"? Riwayat permohonan yang sudah ada tidak berubah.`)) return;
+    try { letterTypeAPI.remove(item.id); setItems(letterTypeAPI.getAll()); setNotice('Jenis surat berhasil dihapus.'); setError(''); } catch (err) { setError(err.message); }
+  };
+  return <div className="max-w-6xl mx-auto space-y-6 text-slate-900 dark:text-white">
+    <div className="flex flex-wrap justify-between gap-4 items-center"><div><h1 className="text-2xl font-semibold">Master Jenis Surat</h1><p className="text-sm text-slate-500 mt-1">Kelola kode, persyaratan, dan ketersediaan layanan surat.</p></div><Link to="/admin/forms/new" className="bg-slate-900 text-white rounded-lg px-4 py-2 text-sm dark:bg-neutral-700">Tambah Jenis Surat</Link></div>
+    <p className="text-xs text-slate-500">Data disimpan pada peramban ini. Jenis nonaktif tidak ditawarkan pada permohonan baru.</p>
+    {error && <p role="alert" className="text-red-700">{error}</p>}{notice && <p role="status" className="text-green-700">{notice}</p>}
+    <div className="flex flex-wrap gap-3"><input aria-label="Cari jenis surat" placeholder="Cari kode atau nama surat..." value={query} onChange={e => setQuery(e.target.value)} className="border rounded-lg px-3 py-2 bg-transparent flex-1"/><select aria-label="Filter status" value={status} onChange={e => setStatus(e.target.value)} className="border rounded-lg px-3 py-2 dark:bg-neutral-900"><option value="all">Semua status</option><option value="active">Aktif</option><option value="inactive">Nonaktif</option></select></div>
+    <div className="overflow-x-auto border border-slate-200 dark:border-neutral-800 rounded-xl"><table className="w-full text-sm text-left"><thead className="bg-slate-50 dark:bg-neutral-900"><tr>{['Kode','Nama Jenis Surat','Persyaratan','Status','Tindakan'].map(label => <th key={label} className="p-4 font-medium">{label}</th>)}</tr></thead><tbody>{filtered.map(item => <tr key={item.id} className="border-t border-slate-200 dark:border-neutral-800"><td className="p-4 font-mono">{item.code}</td><td className="p-4 font-medium">{item.name}</td><td className="p-4"><ul className="list-disc pl-4 text-slate-500">{item.requirements.map(req => <li key={req}>{req}</li>)}</ul></td><td className="p-4">{item.active ? 'Aktif' : 'Nonaktif'}</td><td className="p-4"><div className="flex items-center gap-2 whitespace-nowrap"><Link aria-label={`Ubah ${item.name}`} className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 no-underline transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800" to={`/admin/forms/new?edit=${encodeURIComponent(item.id)}`}><Pencil className="h-3.5 w-3.5" aria-hidden="true" />Ubah</Link><button type="button" aria-label={`Hapus ${item.name}`} className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/60" onClick={() => remove(item)}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" />Hapus</button></div></td></tr>)}</tbody></table>{!filtered.length && <p className="p-8 text-center text-slate-500">Tidak ada jenis surat yang cocok.</p>}</div>
+  </div>;
 }
+

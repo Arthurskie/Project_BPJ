@@ -1,3 +1,6 @@
+import { demoServiceNote } from '../domain/demoTemplates.js';
+export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+
 /**
  * Service API untuk Pembuatan dan Pencetakan Dokumen Surat Resmi (Letter Generator).
  * Menghasilkan template surat kedinasan standar pemerintah Indonesia dengan Kop Surat,
@@ -47,7 +50,9 @@ export const letterGeneratorAPI = {
     instansiAlamat = 'Jl. Raya Cikarang No. 12, Telp. (021) 8910223 - Kode Pos 17530',
     tanggalSurat = new Date()
   }) => {
+    [nomorSurat, jenisSurat, nama, nik, alamat, keperluan, pejabatTTD, nipPejabat, jabatanPejabat, instansiNama, instansiAlamat] = [nomorSurat, jenisSurat, nama, nik, alamat, keperluan, pejabatTTD, nipPejabat, jabatanPejabat, instansiNama, instansiAlamat].map(escapeHTML);
     const tglResmi = letterGeneratorAPI.formatIndonesianDate(tanggalSurat);
+    const serviceNote = demoServiceNote(jenisSurat);
     const judulUpper = jenisSurat.toUpperCase();
     const instansiLines = instansiNama.split('\n');
 
@@ -180,6 +185,7 @@ export const letterGeneratorAPI = {
   </style>
 </head>
 <body>
+<p style="text-align:center;border:2px solid;padding:8px;font-weight:bold">DEMO — TIDAK BERLAKU UNTUK ADMINISTRASI RESMI</p>
   <!-- Tombol Aksi Layar (Disembunyikan saat dicetak) -->
   <div class="no-print" style="margin-bottom: 20px; padding: 12px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
     <div>
@@ -212,7 +218,7 @@ export const letterGeneratorAPI = {
 
   <!-- ISI SURAT -->
   <p class="content-p">
-    Yang bertanda tangan di bawah ini, Kepala Kelurahan Cikarang, Kecamatan Cikarang Pusat, Kabupaten Bekasi, menerangkan dengan sebenarnya bahwa:
+    CONTOH DEMO — BUKAN SURAT RESMI. Data pemohon untuk simulasi layanan:
   </p>
 
   <table class="bio-table">
@@ -239,11 +245,11 @@ export const letterGeneratorAPI = {
   </table>
 
   <p class="content-p">
-    Berdasarkan catatan dan verifikasi dokumen yang ada pada kami, yang bersangkutan adalah benar warga yang tercatat berdomisili di wilayah Kelurahan Cikarang dan surat keterangan ini diberikan atas dasar permohonan yang bersangkutan untuk dipergunakan sebagaimana tercantum di atas.
+    Dokumen ini merupakan contoh ${judulUpper} untuk simulasi pelayanan dengan keperluan ${keperluan}. ${serviceNote} Isi surat resmi harus mengikuti template dan SOP masing-masing layanan.
   </p>
 
   <p class="content-p">
-    Demikian Surat Keterangan ini dibuat dan diberikan kepada yang bersangkutan untuk dapat dipergunakan sebagaimana mestinya dengan penuh tanggung jawab.
+    Contoh ini tidak menyatakan kebenaran peristiwa atau kondisi pemohon dan tidak dapat digunakan untuk keperluan resmi.
   </p>
 
   <!-- PENGESAHAN TANDA TANGAN -->
@@ -253,7 +259,7 @@ export const letterGeneratorAPI = {
       <div class="jabatan">${jabatanPejabat}</div>
       <div class="nama-pejabat">${pejabatTTD}</div>
       <div class="nip">NIP. ${nipPejabat}</div>
-      <div class="stamp-badge">TERVERIFIKASI SISTEM E-SURAT</div>
+      <div class="stamp-badge">CONTOH DEMO — BUKAN SURAT RESMI</div>
     </div>
   </div>
 </body>

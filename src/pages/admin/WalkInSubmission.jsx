@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   CheckCircle2,
@@ -11,31 +11,20 @@ import {
   RefreshCw
 } from 'lucide-react';
 import submissionAPI from '../../services/submissionAPI';
+import letterTypeAPI from '../../services/letterTypeAPI';
 import letterGeneratorAPI from '../../services/letterGeneratorAPI';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/useAuth';
 import Alert from '../../components/Alert';
 import { Spinner } from '../../components/Loading';
 
-const OFFICIALS = [
-  { name: 'Budi Santoso, S.STP', nip: '198503152010011002', role: 'Lurah Cikarang' },
-  { name: 'Dra. Hj. Maryati, M.Si', nip: '197904122005012003', role: 'Sekretaris Kelurahan' },
-  { name: 'Ahmad Zaelani, S.AP', nip: '199002172014031001', role: 'Kepala Seksi Pelayanan Umum' }
-];
+import { OFFICIALS } from '../../domain/officials.js';
 
-const SURAT_TYPES = [
-  'Surat Keterangan Usaha (SKU)',
-  'Surat Keterangan Domisili',
-  'Surat Keterangan Tidak Mampu (SKTM)',
-  'Surat Keterangan Belum Menikah',
-  'Surat Pengantar SKCK',
-  'Surat Keterangan Kematian',
-  'Surat Keterangan Kelahiran',
-  'Surat Keterangan Penghasilan',
-  'Surat Rekomendasi Izin Keramaian'
-];
+
 
 export default function WalkInSubmission() {
   const navigate = useNavigate();
+  const [letterTypes] = useState(() => letterTypeAPI.getActive());
+  const SURAT_TYPES = letterTypes.map(item => item.name);
   const { user } = useAuth();
 
   // State Form
@@ -44,7 +33,7 @@ export default function WalkInSubmission() {
     nama: '',
     alamat: '',
     noHp: '',
-    jenisSurat: SURAT_TYPES[0],
+    jenisSurat: SURAT_TYPES[0] || '',
     keperluan: '',
     status: 'diproses', // 'diproses' | 'selesai'
     nomorSurat: '',
@@ -100,6 +89,10 @@ export default function WalkInSubmission() {
     e.preventDefault();
     setAlert(null);
 
+    if (!letterTypeAPI.getActive().some(item => item.name === formData.jenisSurat)) {
+      setAlert({ type: 'error', message: 'Pilih jenis surat aktif terlebih dahulu.' });
+      return;
+    }
     // Validasi dasar
     if (formData.nik.trim().length !== 16 || !/^\d+$/.test(formData.nik.trim())) {
       setAlert({ type: 'error', message: 'NIK wajib terdiri dari 16 digit angka kependudukan.' });
@@ -206,7 +199,7 @@ export default function WalkInSubmission() {
           </div>
 
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
               Permohonan Walk-in Berhasil Disimpan!
             </h2>
             <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1 max-w-md mx-auto">
@@ -219,7 +212,7 @@ export default function WalkInSubmission() {
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
               Nomor Tiket / Kode Pelacakan
             </span>
-            <span className="font-mono text-xl font-bold text-red-700 dark:text-red-400 block mt-1">
+            <span className="font-mono text-2xl font-semibold text-red-700 dark:text-red-400 block mt-1">
               {createdResult.trackingCode}
             </span>
             <div className="mt-3 pt-3 border-t border-slate-200 dark:border-neutral-800 text-xs text-slate-600 dark:text-neutral-400 flex justify-between">
@@ -266,7 +259,7 @@ export default function WalkInSubmission() {
                   nama: '',
                   alamat: '',
                   noHp: '',
-                  jenisSurat: SURAT_TYPES[0],
+                  jenisSurat: SURAT_TYPES[0] || '',
                   keperluan: '',
                   status: 'diproses',
                   nomorSurat: '',
@@ -305,8 +298,8 @@ export default function WalkInSubmission() {
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-              Input Permohonan Walk-in (Offline)
+            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+              Loket Pelayanan
             </h2>
             <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
               Pendaftaran langsung oleh petugas loket untuk warga yang hadir tatap muka di kelurahan.
@@ -323,7 +316,7 @@ export default function WalkInSubmission() {
       )}
 
       {/* Form Card */}
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl shadow-xs overflow-hidden">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-xs overflow-hidden">
         {/* Section 1: Data Identitas Pemohon */}
         <div className="p-6 border-b border-slate-100 dark:border-neutral-800">
           <div className="flex items-center gap-2.5 mb-4">
@@ -331,7 +324,7 @@ export default function WalkInSubmission() {
               1
             </span>
             <div>
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Identitas Pemohon
               </h3>
               <p className="text-[11px] text-slate-400">Pastikan NIK dan identitas sesuai KTP asli pemohon</p>
@@ -407,7 +400,7 @@ export default function WalkInSubmission() {
               2
             </span>
             <div>
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Detail Permohonan Surat
               </h3>
               <p className="text-[11px] text-slate-400">Jenis surat dan maksud keperluan pembuatan</p>
@@ -425,7 +418,7 @@ export default function WalkInSubmission() {
                 onChange={handleChange}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-white font-medium focus:outline-none focus:border-red-600 cursor-pointer"
               >
-                {SURAT_TYPES.map((type) => (
+                <option value="">Pilih jenis surat</option>{SURAT_TYPES.map((type) => (
                   <option key={type} value={type}>
                     {type}
                   </option>
@@ -457,7 +450,7 @@ export default function WalkInSubmission() {
               3
             </span>
             <div>
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Internal Pelayanan Loket
               </h3>
               <p className="text-[11px] text-slate-400">Pengaturan status penyelesaian dan nomor surat dinas</p>
@@ -600,11 +593,14 @@ export default function WalkInSubmission() {
             className="px-5 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {loading ? <Spinner size="xs" color="white" /> : <Send className="w-3.5 h-3.5" />}
-            <span>Simpan Permohonan Walk-in</span>
+            <span>Simpan Permohonan</span>
           </button>
         </div>
       </form>
     </div>
   );
 }
+
+
+
 

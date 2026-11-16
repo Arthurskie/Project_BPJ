@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   History,
   Search,
@@ -25,26 +25,36 @@ export default function Activity() {
   const [actionFilter, setActionFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  const fetchLogs = async () => {
+  const [request, setRequest] = useState({ actionFilter: 'all', search: '' });
+
+  const fetchLogs = (override = {}) => {
     setLoading(true);
-    try {
-      const res = await auditLogAPI.getAuditLogs({
-        action: actionFilter,
-        search
-      });
-      if (res.success) {
-        setLogs(res.data);
-      }
-    } catch {
-      // Fallback
-    } finally {
-      setLoading(false);
-    }
+    setRequest({ actionFilter, search, ...override });
+  };
+
+  const changeFilter = (value) => {
+    setActionFilter(value);
+    setLoading(true);
+    setRequest({ actionFilter: value, search });
   };
 
   useEffect(() => {
-    fetchLogs();
-  }, [actionFilter]);
+    let active = true;
+    async function load() {
+      try {
+        const res = await auditLogAPI.getAuditLogs({ action: request.actionFilter, search: request.search });
+        if (active && res.success) {
+          setLogs(res.data);
+        }
+      } catch {
+        if (active) {  }
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    load();
+    return () => { active = false; };
+  }, [request]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -133,7 +143,7 @@ export default function Activity() {
             <button
               key={f.value}
               type="button"
-              onClick={() => setActionFilter(f.value)}
+              onClick={() => changeFilter(f.value)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                 actionFilter === f.value
                   ? 'bg-red-700 text-white shadow-xs'
@@ -163,6 +173,7 @@ export default function Activity() {
                 onClick={() => {
                   setActionFilter('all');
                   setSearch('');
+                  fetchLogs({ actionFilter: 'all', search: '' });
                 }}
                 className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
               >
@@ -218,3 +229,4 @@ export default function Activity() {
     </div>
   );
 }
+

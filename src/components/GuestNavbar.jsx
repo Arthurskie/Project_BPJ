@@ -13,7 +13,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
   const lastScrollY = useRef(0);
   const isProgrammaticScroll = useRef(false);
   const location = useLocation();
-  const isLanding = location.pathname === '/guest';
+  const isLanding = (location.pathname === '/guest' || location.pathname === '/');
 
   // Sinkronisasi status navbar saat terjadi navigasi smooth glide
   useEffect(() => {
@@ -122,6 +122,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
 
   return (
     <header
+      data-guest-navbar
       className={`sticky top-0 z-50 w-full transition-transform duration-300 ease-in-out border-b border-slate-200 dark:border-neutral-800 ${
         (navVisible || mobileOpen) ? 'translate-y-0' : '-translate-y-full'
       } ${
@@ -167,7 +168,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                 return isLanding ? (
                   <a
                     key={item.id}
-                    href={`#${item.id}`}
+                    href="/guest"
                     onClick={(e) => handleNav(e, item.id)}
                     className={linkClass}
                   >
@@ -179,7 +180,8 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                 ) : (
                   <Link
                     key={item.id}
-                    to={`/guest#${item.id}`}
+                    to="/guest"
+                    state={{ section: item.id }}
                     className={linkClass}
                   >
                     {item.label}
@@ -258,7 +260,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                   return isLanding ? (
                     <a
                       key={item.id}
-                      href={`#${item.id}`}
+                      href="/guest"
                       onClick={(e) => handleNav(e, item.id)}
                       className={mobileLinkClass}
                     >
@@ -270,7 +272,8 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                   ) : (
                     <Link
                       key={item.id}
-                      to={`/guest#${item.id}`}
+                      to="/guest"
+                    state={{ section: item.id }}
                       onClick={() => setMobileOpen(false)}
                       className={mobileLinkClass}
                     >

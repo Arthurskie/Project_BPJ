@@ -1,5 +1,7 @@
+import letterTypeAPI from './letterTypeAPI';
+import { validateApplicant, validateIssuance, proposeLetterNumber, normalizeLetterNumber } from '../domain/submissionRules.js';
+import { storeDocument, removeDocuments } from './documentStorage';
 import { apiRequest, localDB } from './baseAPI';
-import { auditLogAPI } from './auditLogAPI';
 
 /**
  * Service API untuk Pengajuan & Pelacakan Surat Permohonan.
@@ -14,17 +16,35 @@ export const submissionAPI = {
     try {
       const remoteRes = await apiRequest('/submissions', {
         method: 'POST',
-        body: JSON.stringify(data)
+        body: data instanceof FormData ? data : JSON.stringify(data)
       });
       if (remoteRes) return remoteRes;
     } catch (err) {
       if (err.status && err.status !== 0) throw err;
     }
 
+    let attachment;
+    if (data instanceof FormData) {
+      const input = data;
+      attachment = input.get('lampiran');
+      data = {
+        nik: input.get('nik'), nama: input.get('nama_lengkap'),
+        jenisSurat: input.get('jenis_surat'), keperluan: input.get('perihal'),
+        alamat: input.get('alamat') || '-', instansi: input.get('instansi'), noHp: input.get('telepon'),
+        email: input.get('email'), keterangan: input.get('keterangan'),
+        files: []
+      };
+    }
+    validateApplicant(data, letterTypeAPI.getActive().map(item => item.name));
+    if (!/^\d{16}$/.test(data.nik || '')) throw new Error('NIK harus terdiri dari 16 digit angka.');
+    if (!data.nama?.trim() || !data.alamat?.trim() || data.alamat === '-' || !data.keperluan?.trim()) throw new Error('Nama, alamat domisili, dan keperluan wajib diisi.');
+    const letterTypeSnapshot = structuredClone(letterTypeAPI.getActive().find(item => item.name === data.jenisSurat));
+    localDB.getSubmissions();
+    if (attachment instanceof Blob && attachment.size) data.files = [await storeDocument(attachment)];
     // Generator Kode Tracking Unik: SRT-YYYYMMDD-XXX
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-    const randomSeq = Math.floor(100 + Math.random() * 900);
+    const randomSeq = crypto.randomUUID().slice(0, 8).toUpperCase();
     const trackingCode = `SRT-${dateStr}-${randomSeq}`;
 
     const newSubmission = {
@@ -33,9 +53,13 @@ export const submissionAPI = {
       nik: data.nik?.trim(),
       nama: data.nama?.trim(),
       jenisSurat: data.jenisSurat || 'Surat Permohonan',
+      letterTypeSnapshot,
       keperluan: data.keperluan?.trim() || '-',
       alamat: data.alamat?.trim() || '-',
       noHp: data.noHp?.trim() || '-',
+      email: data.email || '',
+      instansi: data.instansi || '',
+      keterangan: data.keterangan || '',
       files: data.files || [],
       source: 'guest',
       status: 'pending', // pending, diproses, selesai, ditolak
@@ -44,9 +68,15 @@ export const submissionAPI = {
       updatedAt: new Date().toISOString()
     };
 
-    const submissions = localDB.getSubmissions();
-    submissions.unshift(newSubmission);
-    localDB.saveSubmissions(submissions);
+    try {
+      const latestSubmissions = localDB.getSubmissions();
+      latestSubmissions.unshift(newSubmission);
+      localDB.saveSubmissions(latestSubmissions);
+    }
+    catch (error) {
+      try { await removeDocuments(newSubmission.files.map(file => file.storageId).filter(Boolean)); } catch { /* Keep the original persistence error. */ }
+      throw error;
+    }
 
     return {
       success: true,
@@ -173,6 +203,9 @@ export const submissionAPI = {
       throw new Error('Data permohonan tidak ditemukan.');
     }
 
+    if (!['diproses', 'ditolak'].includes(status)) throw new Error('Penyelesaian harus melalui halaman verifikasi lengkap.');
+    if (['selesai', 'ditolak'].includes(submissions[index].status)) throw new Error('Pengajuan final tidak dapat diubah kembali.');
+    if (status === 'ditolak' && !notes.trim()) throw new Error('Alasan penolakan wajib diisi.');
     submissions[index].status = status;
     if (notes) submissions[index].notes = notes;
     submissions[index].updatedAt = new Date().toISOString();
@@ -182,10 +215,7 @@ export const submissionAPI = {
       submissions[index].verifiedAt = new Date().toISOString();
     }
 
-    localDB.saveSubmissions(submissions);
-
-    // Catat ke audit log
-    await auditLogAPI.logAction({
+    localDB.saveSubmissionWithAudit(submissions, {
       adminId: adminInfo.adminId || 'admin',
       adminName: adminInfo.adminName || 'Petugas Loket',
       action: 'update_status',
@@ -252,6 +282,10 @@ export const submissionAPI = {
     }
 
     const current = submissions[index];
+    if (status === 'selesai') validateIssuance({ status, nomorSurat, pejabatTTD }, submissions, current.id);
+    if (['selesai', 'ditolak'].includes(current.status)) throw new Error('Pengajuan sudah final. Muat ulang data.');
+    const normalizeNumber = value => String(value || '').replace(/\s/g, '').toUpperCase();
+    if (status === 'selesai' && submissions.some(item => item.id !== current.id && normalizeNumber(item.nomorSurat) === normalizeNumber(nomorSurat))) throw new Error('Nomor surat sudah digunakan.');
     const nowIso = new Date().toISOString();
 
     submissions[index] = {
@@ -266,15 +300,13 @@ export const submissionAPI = {
       updatedAt: nowIso
     };
 
-    localDB.saveSubmissions(submissions);
-
     // Catat ke Audit Log
     const actionLabel = status === 'selesai' ? 'verify_submission' : 'reject_submission';
     const detailMsg = status === 'selesai'
       ? `Menyetujui permohonan ${current.trackingCode} (${current.jenisSurat}) dengan Nomor Surat: ${nomorSurat}`
       : `Menolak permohonan ${current.trackingCode} (${current.jenisSurat}). Alasan: ${catatanVerifikasi}`;
 
-    await auditLogAPI.logAction({
+    localDB.saveSubmissionWithAudit(submissions, {
       adminId: adminId || 'admin-verif',
       adminName: adminName || 'Admin Verifikator',
       action: actionLabel,
@@ -297,6 +329,8 @@ export const submissionAPI = {
    * @param {Object} data 
    */
   createWalkInSubmission: async (data) => {
+    validateApplicant(data, letterTypeAPI.getActive().map(item => item.name));
+    validateIssuance({ ...data, status: data.status || 'diproses' }, localDB.getSubmissions());
     // Validasi field wajib
     if (!data.nik || data.nik.trim().length !== 16) {
       throw new Error('NIK pemohon wajib 16 digit angka.');
@@ -308,6 +342,7 @@ export const submissionAPI = {
       throw new Error('Jenis surat permohonan wajib dipilih.');
     }
 
+    const letterTypeSnapshot = structuredClone(letterTypeAPI.getActive().find(item => item.name === data.jenisSurat));
     const status = data.status || 'diproses'; // default walk-in: 'diproses' atau 'selesai'
 
     if (status === 'selesai') {
@@ -322,7 +357,7 @@ export const submissionAPI = {
     try {
       const remoteRes = await apiRequest('/submissions/walk-in', {
         method: 'POST',
-        body: JSON.stringify(data)
+        body: data instanceof FormData ? data : JSON.stringify(data)
       });
       if (remoteRes) return remoteRes;
     } catch (err) {
@@ -331,7 +366,7 @@ export const submissionAPI = {
 
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-    const randomSeq = Math.floor(100 + Math.random() * 900);
+    const randomSeq = crypto.randomUUID().slice(0, 8).toUpperCase();
     const trackingCode = `SRT-${dateStr}-${randomSeq}`;
 
     const newSubmission = {
@@ -340,6 +375,7 @@ export const submissionAPI = {
       nik: data.nik.trim(),
       nama: data.nama.trim(),
       jenisSurat: data.jenisSurat.trim(),
+      letterTypeSnapshot,
       keperluan: data.keperluan?.trim() || '-',
       alamat: data.alamat?.trim() || '-',
       noHp: data.noHp?.trim() || '-',
@@ -351,6 +387,9 @@ export const submissionAPI = {
       notes: data.notes?.trim() || (status === 'selesai' ? 'Surat permohonan telah selesai diterbitkan di loket.' : 'Permohonan walk-in sedang diproses petugas loket.'),
       verifiedBy: data.adminName || data.adminId || 'Petugas Loket',
       verifiedAt: now.toISOString(),
+      email: data.email || '',
+      instansi: data.instansi || '',
+      keterangan: data.keterangan || '',
       files: data.files || [],
       createdAt: now.toISOString(),
       updatedAt: now.toISOString()
@@ -358,10 +397,8 @@ export const submissionAPI = {
 
     const submissions = localDB.getSubmissions();
     submissions.unshift(newSubmission);
-    localDB.saveSubmissions(submissions);
-
     // Catat ke Audit Trail
-    await auditLogAPI.logAction({
+    localDB.saveSubmissionWithAudit(submissions, {
       adminId: data.adminId || 'admin-loket',
       adminName: data.adminName || 'Petugas Loket',
       action: 'create_walkin',
@@ -391,36 +428,7 @@ export const submissionAPI = {
       // fallback lokal
     }
 
-    const ROMAN_MONTHS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = ROMAN_MONTHS[now.getMonth()];
-
-    const numbers = localDB.getLetterNumbers();
-    const thisYearNums = numbers.filter((n) => n.year === year);
-    const nextSeq = thisYearNums.length + 1;
-    const nomorSurat = `470 / ${String(nextSeq).padStart(3, '0')} / ${kodeInstansi} / ${month} / ${year}`;
-
-    // Simpan ke daftar nomor yang sudah digenerate
-    numbers.push({
-      id: `ln-${Date.now()}`,
-      nomorSurat,
-      year,
-      seq: nextSeq,
-      createdAt: now.toISOString()
-    });
-    localDB.saveLetterNumbers(numbers);
-
-    return {
-      success: true,
-      data: {
-        nomorSurat,
-        seq: nextSeq,
-        year,
-        month,
-        kodeInstansi
-      }
-    };
+    return { success: true, data: proposeLetterNumber(localDB.getSubmissions(), kodeInstansi) };
   },
 
   /**
@@ -429,7 +437,7 @@ export const submissionAPI = {
    * @param {string} [currentSubmissionId] - abaikan jika nomor dimiliki submission saat ini
    */
   validateLetterNumber: async (nomorSurat, currentSubmissionId = null) => {
-    const cleanNomor = nomorSurat?.trim().toLowerCase();
+    const cleanNomor = normalizeLetterNumber(nomorSurat);
     if (!cleanNomor) return { success: true, isDuplicate: false };
 
     try {
@@ -444,7 +452,7 @@ export const submissionAPI = {
       (s) =>
         s.id !== currentSubmissionId &&
         s.nomorSurat &&
-        s.nomorSurat.trim().toLowerCase() === cleanNomor
+        normalizeLetterNumber(s.nomorSurat) === cleanNomor
     );
 
     return {
@@ -457,3 +465,5 @@ export const submissionAPI = {
 // Aliaskan untuk kemudahan backwards-compatibility
 export const submissionService = submissionAPI;
 export default submissionAPI;
+
+

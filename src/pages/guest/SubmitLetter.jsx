@@ -1,3 +1,4 @@
+import { applicantErrors } from '../../domain/workflow.js';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -16,9 +17,15 @@ import GuestNavbar from '../../components/GuestNavbar';
 import { GarudaLogo } from '../../components/IndonesiaSeal';
 import heroBg from '../../assets/hero-bg.jpg';
 import submissionAPI from '../../services/submissionAPI';
+import letterTypeAPI from '../../services/letterTypeAPI';
 
 const SubmitLetter = () => {
   const navigate = useNavigate();
+  const [letterTypes] = useState(() => letterTypeAPI.getActive());
+  const submitLock = useRef(false);
+  const [reviewing, setReviewing] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [copyMessage, setCopyMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -28,12 +35,13 @@ const SubmitLetter = () => {
     nama: '',
     email: '',
     telepon: '',
-    instansi: '',
-    jenisSurat: 'Permohonan Audiensi',
+    alamat: '',
+    jenisSurat: letterTypes[0]?.name || '',
     perihal: '',
     keterangan: '',
   });
 
+  const [fileError, setFileError] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState('');
@@ -48,6 +56,7 @@ const SubmitLetter = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setReviewing(false);
     // Khusus NIK hanya angka
     if (name === 'nik') {
       setFormData((prev) => ({ ...prev, [name]: value.replace(/\D/g, '').slice(0, 16) }));
@@ -57,10 +66,15 @@ const SubmitLetter = () => {
   };
 
   const handleFileChange = (e) => {
+    setReviewing(false);
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Ukuran berkas melebihi batas maksimal 10 MB.');
+    setFileError('');
+    const extension = file.name.split('.').pop().toLowerCase();
+    const allowed = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+    if (!allowed[extension] || (file.type && file.type !== allowed[extension]) || file.size > 10 * 1024 * 1024) {
+      clearFile();
+      setFileError('Pilih berkas PNG, JPG, PDF, DOC, atau DOCX dengan ukuran maksimal 10 MB.');
       return;
     }
     setSelectedFile(file);
@@ -69,6 +83,8 @@ const SubmitLetter = () => {
   };
 
   const clearFile = () => {
+    setReviewing(false);
+    setFileError('');
     setSelectedFile(null);
     setFileName('');
     setFileSize('');
@@ -77,13 +93,22 @@ const SubmitLetter = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitLock.current) return;
     setErrorMsg('');
-
+    const errors = applicantErrors({...formData, keperluan:formData.perihal}, letterTypeAPI.getActive().map(item => item.name));
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) { setReviewing(false); return; }
+    if (!reviewing) { setReviewing(true); return; }
     if (formData.nik.length !== 16) {
       setErrorMsg('NIK harus terdiri dari 16 digit angka.');
       return;
     }
 
+    if (!letterTypeAPI.getActive().some(item => item.name === formData.jenisSurat)) {
+      setErrorMsg('Pilih jenis surat aktif terlebih dahulu.');
+      return;
+    }
+    submitLock.current = true;
     setIsSubmitting(true);
 
     try {
@@ -92,7 +117,7 @@ const SubmitLetter = () => {
       payload.append('nama_lengkap', formData.nama);
       payload.append('email', formData.email || '');
       payload.append('telepon', formData.telepon || '');
-      payload.append('instansi', formData.instansi || '');
+      payload.append('alamat', formData.alamat || '');
       payload.append('jenis_surat', formData.jenisSurat);
       payload.append('perihal', formData.perihal);
       payload.append('keterangan', formData.keterangan || '');
@@ -121,11 +146,13 @@ const SubmitLetter = () => {
       console.error('[Submit Error]:', err);
       setErrorMsg(err.message || 'Gagal mengirimkan permohonan surat. Silakan coba lagi.');
     } finally {
+      submitLock.current = false;
       setIsSubmitting(false);
     }
   };
 
   const handleReset = () => {
+    setReviewing(false);
     setIsSuccess(false);
     setRegistrationData(null);
     setSelectedFile(null);
@@ -137,8 +164,8 @@ const SubmitLetter = () => {
       nama: '',
       email: '',
       telepon: '',
-      instansi: '',
-      jenisSurat: 'Permohonan Audiensi',
+      alamat: '',
+      jenisSurat: letterTypes[0]?.name || '',
       perihal: '',
       keterangan: '',
     });
@@ -171,7 +198,7 @@ const SubmitLetter = () => {
       <main className="flex-1 pb-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20">
 
-          {/* ── Success / Tanda Terima ── */}
+          {/* â”€â”€ Success / Tanda Terima â”€â”€ */}
           {isSuccess && registrationData ? (
             <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-sm overflow-hidden animate-fade-in print-only-container">
 
@@ -207,7 +234,7 @@ const SubmitLetter = () => {
                 {/* Nomor registrasi / Kode Tracking */}
                 <div className="text-center mb-5 sm:mb-6">
                   <p className="text-[11px] sm:text-xs text-slate-500 mb-0.5 sm:mb-1">Kode Tracking / Nomor Tiket</p>
-                  <p className="text-xl sm:text-2xl font-bold text-red-700 font-mono tracking-wide">{registrationData.nomorReg}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-red-700 font-mono tracking-wide">{registrationData.nomorReg}</p><button type="button" className="underline mt-2" onClick={async () => { try { await navigator.clipboard.writeText(registrationData.nomorReg); setCopyMessage('Kode tracking disalin.'); } catch { setCopyMessage('Tidak dapat menyalin. Pilih dan salin kode di atas.'); } }}>Salin kode tracking</button><p role="status">{copyMessage}</p>
                   <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1">{registrationData.waktu}</p>
                 </div>
 
@@ -234,12 +261,12 @@ const SubmitLetter = () => {
                         ['Nama Lengkap', registrationData.nama],
                         ['Email', registrationData.email || '-'],
                         ['Telepon', registrationData.telepon || '-'],
-                        ['Asal Instansi', registrationData.instansi || '-'],
+                        ['Asal Instansi', registrationData.alamat || '-'],
                         ['Jenis Surat', registrationData.jenisSurat],
                         ['Perihal', registrationData.perihal],
                         ['Lampiran Berkas', registrationData.fileName ? `${registrationData.fileName} (${registrationData.fileSize})` : 'Tidak ada lampiran'],
                         ['Status Pengajuan', 'Menunggu Verifikasi (Pending)'],
-                        ['Estimasi Layanan', '1×24 jam kerja'],
+                        ['Estimasi Layanan', '1Ã—24 jam kerja'],
                       ].map(([label, value], i) => (
                         <tr key={i} className="border-b border-slate-200 last:border-b-0">
                           <td className="w-2/5 sm:w-1/3 px-3 py-2 sm:px-4 sm:py-2.5 bg-slate-50 font-semibold text-slate-700">{label}</td>
@@ -268,7 +295,7 @@ const SubmitLetter = () => {
                   onClick={() => navigate('/guest')}
                   className="w-full sm:w-auto px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-colors text-center"
                 >
-                  ← Kembali ke Beranda
+                  â† Kembali ke Beranda
                 </button>
                 <div className="flex gap-2 w-full sm:w-auto">
                   <Link
@@ -297,7 +324,7 @@ const SubmitLetter = () => {
 
             </div>
           ) : (
-            /* ── Form Pengajuan ── */
+            /* â”€â”€ Form Pengajuan â”€â”€ */
             <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-sm overflow-hidden animate-fade-in">
 
               {/* Form header */}
@@ -317,7 +344,10 @@ const SubmitLetter = () => {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} noValidate>
+<section className="p-5 border-b" aria-label="Persyaratan layanan"><h2 className="font-semibold">Persyaratan {formData.jenisSurat}</h2><ul className="list-disc pl-5 text-sm">{letterTypes.find(item => item.name === formData.jenisSurat)?.requirements.map(item => <li key={item}>{item}</li>)}</ul><p className="text-sm mt-2">Siapkan berkas sesuai persyaratan. Data demo tersimpan hanya pada browser ini.</p></section>
+{Object.keys(fieldErrors).length > 0 && <div role="alert" className="p-5 text-red-700"><h2>Periksa isian berikut:</h2>{Object.entries(fieldErrors).map(([key,value]) => <p key={key} id={'error-'+key}><a href={'#'+(key === 'keperluan' ? 'perihal' : key)}>{value}</a></p>)}</div>}
+{reviewing && <section className="p-5 border-2 border-red-700" aria-label="Tinjau permohonan"><h2 className="font-bold">Tinjau sebelum mengirim</h2><dl>{Object.entries({NIK:formData.nik,Nama:formData.nama,Alamat:formData.alamat,Layanan:formData.jenisSurat,Email:formData.email || 'Tidak dicantumkan',Telepon:formData.telepon || 'Tidak dicantumkan',Keperluan:formData.perihal,Keterangan:formData.keterangan || 'Tidak dicantumkan',Lampiran:fileName || 'Tidak ada'}).map(([key,value]) => <div key={key}><dt className="font-semibold">{key}</dt><dd>{value}</dd></div>)}</dl><button type="button" className="underline mt-3" onClick={() => setReviewing(false)}>Ubah isian</button></section>}
                 <div className="px-4 sm:px-8 py-5 sm:py-6 space-y-4 sm:space-y-5">
 
                   {/* NIK (Wajib 16 digit) & Nama Lengkap */}
@@ -329,8 +359,9 @@ const SubmitLetter = () => {
                       <input
                         ref={nikInputRef}
                         id="nik"
-                        name="nik"
+                        name="nik" aria-invalid={Boolean(fieldErrors.nik)} aria-describedby={fieldErrors.nik ? 'error-nik' : undefined}
                         type="text"
+                        inputMode="numeric"
                         maxLength={16}
                         required
                         value={formData.nik}
@@ -345,7 +376,7 @@ const SubmitLetter = () => {
                       </label>
                       <input
                         id="nama"
-                        name="nama"
+                        name="nama" aria-invalid={Boolean(fieldErrors.nama)} aria-describedby={fieldErrors.nama ? 'error-nama' : undefined}
                         type="text"
                         required
                         value={formData.nama}
@@ -360,13 +391,12 @@ const SubmitLetter = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
-                        Alamat Email <span className="text-red-500">*</span>
+                        Alamat Email (opsional)
                       </label>
                       <input
                         id="email"
-                        name="email"
+                        name="email" aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? 'error-email' : undefined}
                         type="email"
-                        required
                         value={formData.email}
                         onChange={handleChange}
                         className={inputClass}
@@ -392,17 +422,18 @@ const SubmitLetter = () => {
                   {/* Asal Instansi & Jenis Surat */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="instansi" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
-                        Asal Instansi / Universitas <span className="text-slate-400 font-normal">(opsional)</span>
+                      <label htmlFor="alamat" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">
+                        Alamat Domisili <span className="text-red-500">*</span>
                       </label>
                       <input
-                        id="instansi"
-                        name="instansi"
+                        id="alamat"
+                        name="alamat" aria-invalid={Boolean(fieldErrors.alamat)} aria-describedby={fieldErrors.alamat ? 'error-alamat' : undefined}
                         type="text"
-                        value={formData.instansi}
+                        required
+                        value={formData.alamat}
                         onChange={handleChange}
                         className={inputClass}
-                        placeholder="Contoh: Universitas Indonesia"
+                        placeholder="Jalan, nomor rumah, RT/RW, kelurahan"
                       />
                     </div>
                     <div>
@@ -411,18 +442,15 @@ const SubmitLetter = () => {
                       </label>
                       <select
                         id="jenisSurat"
-                        name="jenisSurat"
+                        name="jenisSurat" aria-invalid={Boolean(fieldErrors.jenisSurat)} aria-describedby={fieldErrors.jenisSurat ? 'error-jenisSurat' : undefined}
                         value={formData.jenisSurat}
                         onChange={handleChange}
                         className={inputClass}
                         required
                       >
-                        <option value="Permohonan Audiensi">Permohonan Audiensi</option>
-                        <option value="Izin Penelitian / Magang">Izin Penelitian / Magang (PKL)</option>
-                        <option value="Surat Keterangan / Rekomendasi">Surat Keterangan / Rekomendasi</option>
-                        <option value="Undangan Kedinasan">Undangan Kedinasan</option>
-                        <option value="Surat Masuk Lainnya">Surat Masuk Lainnya</option>
+                        <option value="">Pilih jenis surat</option>{letterTypes.map(type => <option key={type.id} value={type.name}>{type.name}</option>)}
                       </select>
+                      {letterTypes.find(type => type.name === formData.jenisSurat) && <div className="mt-3 text-xs text-slate-500"><p className="font-medium">Persyaratan:</p><ul className="list-disc pl-4">{letterTypes.find(type => type.name === formData.jenisSurat).requirements.map(req => <li key={req}>{req}</li>)}</ul></div>}
                     </div>
                   </div>
 
@@ -433,7 +461,7 @@ const SubmitLetter = () => {
                     </label>
                     <input
                       id="perihal"
-                      name="perihal"
+                      name="perihal" aria-invalid={Boolean(fieldErrors.keperluan)} aria-describedby={fieldErrors.keperluan ? 'error-keperluan' : undefined}
                       type="text"
                       required
                       value={formData.perihal}
@@ -461,6 +489,7 @@ const SubmitLetter = () => {
                         </div>
                         <button
                           type="button"
+                          aria-label="Hapus berkas lampiran"
                           onClick={clearFile}
                           className="text-slate-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors shrink-0 ml-3"
                         >
@@ -468,9 +497,10 @@ const SubmitLetter = () => {
                         </button>
                       </div>
                     ) : (
-                      <div
+                      <button
+                        type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="group border-2 border-dashed border-slate-200 dark:border-neutral-700 rounded-lg px-4 py-7 text-center cursor-pointer hover:border-red-400 dark:hover:border-red-500/40 hover:bg-red-50/50 dark:hover:bg-red-950/10 transition-all"
+                        className="w-full group border-2 border-dashed border-slate-200 dark:border-neutral-700 rounded-lg px-4 py-7 text-center cursor-pointer hover:border-red-400 dark:hover:border-red-500/40 hover:bg-red-50/50 dark:hover:bg-red-950/10 transition-all"
                       >
                         <div className="w-10 h-10 mx-auto mb-2.5 rounded-lg bg-slate-100 dark:bg-neutral-800 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 flex items-center justify-center transition-colors">
                           <Upload size={18} className="text-slate-400 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
@@ -479,17 +509,20 @@ const SubmitLetter = () => {
                           Pilih berkas lampiran pendukung
                         </p>
                         <p className="text-xs text-slate-400 mt-1">
-                          Format: PDF, DOC, DOCX — Maksimal 10 MB
+                          Format: PNG, JPG, PDF, DOC, DOCX — Maksimal 10 MB
                         </p>
-                      </div>
+                      </button>
                     )}
                     <input
                       ref={fileInputRef}
                       type="file"
                       className="hidden"
-                      accept=".pdf,.doc,.docx"
+                      aria-label="Berkas lampiran pendukung"
+                      aria-describedby="file-error"
+                      accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
                       onChange={handleFileChange}
                     />
+                    <p id="file-error" role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{fileError}</p>
                   </div>
 
                   {/* Catatan / Keterangan */}
@@ -531,7 +564,7 @@ const SubmitLetter = () => {
                       </>
                     ) : (
                       <>
-                        <span>Kirim Permohonan Surat</span>
+                        <span>{reviewing ? 'Konfirmasi & Kirim Permohonan' : 'Tinjau Permohonan'}</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                       </>
                     )}
@@ -560,3 +593,4 @@ const SubmitLetter = () => {
 };
 
 export default SubmitLetter;
+
