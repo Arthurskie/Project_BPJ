@@ -22,7 +22,9 @@ import letterTypeAPI from '../../services/letterTypeAPI';
 
 const SubmitLetter = () => {
   const navigate = useNavigate();
-  const [letterTypes] = useState(() => letterTypeAPI.getActive());
+  const [letterTypes, setLetterTypes] = useState([]);
+  const [typesLoading, setTypesLoading] = useState(true);
+  const [typesError, setTypesError] = useState('');
   const submitLock = useRef(false);
   const [reviewing, setReviewing] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -49,6 +51,16 @@ const SubmitLetter = () => {
   const [registrationData, setRegistrationData] = useState(null);
   const fileInputRef = useRef(null);
   const nikInputRef = useRef(null);
+
+  useEffect(() => {
+    let active = true;
+    letterTypeAPI.getActive().then(items => {
+      if (!active) return;
+      setLetterTypes(items);
+      setFormData(prev => ({ ...prev, jenisSurat: prev.jenisSurat || items[0]?.name || '' }));
+    }).catch(err => { if (active) setTypesError(err.message); }).finally(() => { if (active) setTypesLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!isSuccess && nikInputRef.current) nikInputRef.current.focus();
@@ -94,9 +106,10 @@ const SubmitLetter = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (typesLoading || typesError) return;
     if (submitLock.current) return;
     setErrorMsg('');
-    const errors = applicantErrors({...formData, keperluan:formData.perihal}, letterTypeAPI.getActive().map(item => item.name));
+    const errors = applicantErrors({...formData, keperluan:formData.perihal}, letterTypes.map(item => item.name));
     setFieldErrors(errors);
     if (Object.keys(errors).length) { setReviewing(false); return; }
     if (!reviewing) { setReviewing(true); return; }
@@ -105,7 +118,7 @@ const SubmitLetter = () => {
       return;
     }
 
-    if (!letterTypeAPI.getActive().some(item => item.name === formData.jenisSurat)) {
+    if (!letterTypes.some(item => item.name === formData.jenisSurat)) {
       setErrorMsg('Pilih jenis surat aktif terlebih dahulu.');
       return;
     }
@@ -135,7 +148,7 @@ const SubmitLetter = () => {
       }).format(now) + ' WIB';
 
       setRegistrationData({
-        nomorReg: res.data?.trackingCode || `SRT-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-001`,
+        nomorReg: res.data.trackingCode,
         waktu,
         ...formData,
         fileName,
@@ -346,7 +359,10 @@ const SubmitLetter = () => {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
+              {typesLoading && <p role="status">Memuat jenis surat…</p>}
+      {typesError && <p role="alert">{typesError}</p>}
+      {!typesLoading && !typesError && !letterTypes.length && <p role="status">Belum ada jenis surat aktif.</p>}
+      <form onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
 <section className="p-5 border-b" aria-label="Persyaratan layanan"><h2 className="font-semibold">Persyaratan {formData.jenisSurat}</h2><ul className="list-disc pl-5 text-sm">{letterTypes.find(item => item.name === formData.jenisSurat)?.requirements.map(item => <li key={item}>{item}</li>)}</ul><p className="text-sm mt-2">Siapkan berkas sesuai persyaratan. Data demo tersimpan hanya pada browser ini.</p></section>
 {Object.keys(fieldErrors).length > 0 && <div role="alert" className="p-5 text-red-700"><h2>Periksa isian berikut:</h2>{Object.entries(fieldErrors).map(([key,value]) => <p key={key} id={'error-'+key}><a href={'#'+(key === 'keperluan' ? 'perihal' : key)}>{value}</a></p>)}</div>}
 {reviewing && <section className="p-5 border-2 border-red-700" aria-label="Tinjau permohonan"><h2 className="font-bold">Tinjau sebelum mengirim</h2><dl>{Object.entries({NIK:formData.nik,Nama:formData.nama,Alamat:formData.alamat,Layanan:formData.jenisSurat,Email:formData.email || 'Tidak dicantumkan',Telepon:formData.telepon || 'Tidak dicantumkan',Keperluan:formData.perihal,Keterangan:formData.keterangan || 'Tidak dicantumkan',Lampiran:fileName || 'Tidak ada'}).map(([key,value]) => <div key={key}><dt className="font-semibold">{key}</dt><dd>{value}</dd></div>)}</dl><button type="button" className="underline mt-3" onClick={() => setReviewing(false)}>Ubah isian</button></section>}
@@ -561,7 +577,7 @@ const SubmitLetter = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || typesLoading || !!typesError || !letterTypes.length}
                     className="submission-submit w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-2.5 text-xs sm:text-sm font-semibold text-white bg-red-700 hover:bg-red-800 active:scale-[0.98] rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
                   >
                     {isSubmitting ? (

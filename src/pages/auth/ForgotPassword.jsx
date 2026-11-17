@@ -1,157 +1,49 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/useAuth';
-import { AlertCircle, CheckCircle2, ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
 
 export default function ForgotPassword() {
-  const { forgotPassword } = useAuth();
-
+  const { forgotPassword, updatePassword, passwordRecovery } = useAuth();
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [isSent, setIsSent] = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
-
-    if (!email.trim()) {
-      setErrorMsg('Mohon masukkan email kedinasan atau NIP Anda.');
-      return;
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [complete, setComplete] = useState(false);
+  const requested = ['recovery', 'invite'].includes(new URLSearchParams(window.location.search).get('mode'));
+  const updating = passwordRecovery || requested;
+  async function submit(event) {
+    event.preventDefault();
+    setError(''); setMessage('');
+    if (updating && (password.length < 8 || password !== confirmation)) {
+      setError('Kata sandi minimal 8 karakter dan konfirmasi harus sama.'); return;
     }
-
-    setLoading(true);
-
+    setBusy(true);
     try {
-      const res = await forgotPassword(email);
-      setSuccessMsg(res.message || 'Tautan pemulihan kata sandi telah dikirimkan ke email terdaftar.');
-      setIsSent(true);
-      setResendTimer(60);
-
-      const interval = setInterval(() => {
-        setResendTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } catch (err) {
-      setErrorMsg(err.message || 'Email atau NIP tidak ditemukan dalam database kepegawaian.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="max-w-md mx-auto">
-      <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl p-6 sm:p-8 shadow-sm">
-        
-        {/* Header Form */}
-        <div className="mb-6">
-          <span className="inline-block text-[11px] font-semibold tracking-wider uppercase text-slate-500 dark:text-neutral-400 bg-slate-100 dark:bg-neutral-800 px-2.5 py-1 rounded">
-            Pemulihan Akses
-          </span>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mt-2.5">
-            Lupa Kata Sandi
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1 leading-relaxed">
-            Masukkan NIP atau email kedinasan terdaftar untuk menerima instruksi pengaturan ulang kata sandi.
-          </p>
-        </div>
-
-        {/* Alert Error */}
-        {errorMsg && (
-          <div className="mb-5 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-lg flex items-start gap-2.5 text-red-700 dark:text-red-300 text-xs">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
-            <span className="leading-relaxed">{errorMsg}</span>
-          </div>
-        )}
-
-        {isSent ? (
-          /* Tampilan Konfirmasi Sukses */
-          <div className="space-y-5">
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-lg flex items-start gap-3 text-emerald-800 dark:text-emerald-300 text-xs">
-              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
-              <div>
-                <p className="font-semibold text-slate-900 dark:text-white">Tautan Berhasil Dikirim</p>
-                <p className="mt-1 leading-relaxed text-slate-600 dark:text-neutral-300">{successMsg}</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-500 dark:text-neutral-400 leading-relaxed">
-              Silakan periksa kotak masuk atau folder spam email kedinasan Anda. Tautan pemulihan berlaku selama 30 menit.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-              <button
-                type="button"
-                disabled={resendTimer > 0 || loading}
-                onClick={handleSubmit}
-                className="w-full sm:w-auto flex-1 py-2 px-3 bg-slate-50 hover:bg-slate-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-neutral-200 font-medium rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                <span>{resendTimer > 0 ? `Kirim Ulang (${resendTimer}d)` : 'Kirim Ulang'}</span>
-              </button>
-
-              <Link
-                to="/login"
-                className="w-full sm:w-auto flex-1 py-2 px-3 bg-red-700 hover:bg-red-800 text-white font-medium rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm"
-              >
-                <span>Halaman Masuk</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
-        ) : (
-          /* Form Input */
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
-                NIP atau Email Kedinasan
-              </label>
-              <input
-                type="text"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Contoh: 19850315... atau nama@kelurahan.go.id"
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-colors"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 py-2.5 px-4 bg-red-700 hover:bg-red-800 active:bg-red-900 text-white font-medium rounded-lg text-sm shadow-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Mengirim...</span>
-                </>
-              ) : (
-                <span>Kirim Tautan Pemulihan</span>
-              )}
-            </button>
-
-            <div className="pt-2 text-center">
-              <Link
-                to="/login"
-                className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white font-medium"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Kembali ke Halaman Masuk</span>
-              </Link>
-            </div>
-          </form>
-        )}
-
-      </div>
-    </div>
-  );
+      if (updating) {
+        await updatePassword(password); setComplete(true);
+        setMessage('Kata sandi telah disimpan. Silakan masuk kembali.');
+        window.history.replaceState(null, '', '/forgot-password');
+      } else {
+        const result = await forgotPassword(email); setMessage(result.message);
+      }
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  }
+  const field = 'w-full rounded-lg border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 mt-1';
+  return <div className="max-w-md mx-auto rounded-xl bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 p-6 sm:p-8">
+    <h2 className="text-xl font-bold">{updating ? 'Atur Kata Sandi' : 'Lupa Kata Sandi'}</h2>
+    <p className="text-sm text-slate-600 dark:text-neutral-300 mt-2">{updating ? 'Gunakan tautan undangan atau pemulihan yang dikirim oleh sistem.' : 'Masukkan email kedinasan untuk meminta tautan pemulihan.'}</p>
+    {error && <p role="alert" className="mt-4 text-sm text-red-700 dark:text-red-300">{error}</p>}
+    {message && <p role="status" className="mt-4 text-sm text-emerald-700 dark:text-emerald-300">{message}</p>}
+    {!complete && <form onSubmit={submit} className="mt-5 space-y-4">
+      {updating ? <>
+        <label className="block text-sm">Kata sandi baru<input className={field} required minLength={8} type="password" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} /></label>
+        <label className="block text-sm">Konfirmasi kata sandi<input className={field} required minLength={8} type="password" autoComplete="new-password" value={confirmation} onChange={e => setConfirmation(e.target.value)} /></label>
+      </> : <label className="block text-sm">Email kedinasan<input className={field} required type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} /></label>}
+      <button disabled={busy} className="w-full rounded-lg bg-red-700 hover:bg-red-800 text-white px-4 py-2 disabled:opacity-50">{busy ? 'Memproses...' : updating ? 'Simpan Kata Sandi' : 'Kirim Tautan Pemulihan'}</button>
+    </form>}
+    <Link to="/login" className="inline-block mt-5 text-sm underline">Kembali ke halaman masuk</Link>
+  </div>;
 }

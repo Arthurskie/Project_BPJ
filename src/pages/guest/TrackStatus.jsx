@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Search, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import GuestNavbar from '../../components/GuestNavbar';
 import './landing.css';
@@ -7,9 +7,8 @@ import './track-status.css';
 import submissionAPI from '../../services/submissionAPI';
 
 export default function TrackStatus() {
-  const [searchParams] = useSearchParams();
   const [nik, setNik] = useState('');
-  const [trackingCode, setTrackingCode] = useState(() => searchParams.get('code') || '');
+  const [trackingCode, setTrackingCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -108,7 +107,7 @@ export default function TrackStatus() {
                   id="track-code"
                   value={trackingCode}
                   onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
-                  placeholder="Contoh: SRT-20261112-001"
+                  placeholder="Kode 32 karakter dari bukti pengajuan"
                   className="w-full px-3.5 py-2.5 text-xs sm:text-sm font-mono bg-slate-50 dark:bg-neutral-800 border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
                 />
               </div>
@@ -146,7 +145,7 @@ export default function TrackStatus() {
                   {result.perihal}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Pemohon: <strong>{result.nama}</strong> &bull; {new Date(result.tanggal).toLocaleDateString('id-ID', { dateStyle: 'full' })}
+                  Diterima pada {new Date(result.tanggal).toLocaleDateString('id-ID', { dateStyle: 'full' })}
                 </p>
               </div>
 
