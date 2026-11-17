@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { isDemoMode } from '../../services/supabaseClient';
 import { useAuth } from '../../contexts/useAuth';
 import { Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, user, passwordRecovery } = useAuth();
+  const { login, user } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,19 +22,17 @@ export default function Login() {
 
   // Jika user sudah memiliki sesi login aktif, langsung arahkan ke Dashboard Admin
   useEffect(() => {
-    if (passwordRecovery) {
-      navigate('/forgot-password?mode=recovery', { replace: true });
-    } else if (user) {
+    if (user) {
       navigate(redirectTarget, { replace: true });
     }
-  }, [user, passwordRecovery, navigate, redirectTarget]);
+  }, [user, navigate, redirectTarget]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
     if (!email.trim() || !password) {
-      setErrorMsg('Mohon lengkapi email dan kata sandi Anda.');
+      setErrorMsg('Mohon lengkapi NIP/email dan kata sandi Anda.');
       return;
     }
 
@@ -70,7 +67,7 @@ export default function Login() {
             Masuk ke Sistem
           </h2>
           <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1 leading-relaxed">
-            Gunakan email kedinasan terdaftar untuk mengelola permohonan surat warga.
+            Gunakan NIP atau email kedinasan terdaftar untuk mengelola permohonan surat warga.
           </p>
         </div>
 
@@ -86,7 +83,7 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
-              Email Kedinasan
+              NIP atau Email Kedinasan
             </label>
             <input
               type="text"
@@ -168,12 +165,12 @@ export default function Login() {
             to="/register"
             className="font-semibold text-red-700 dark:text-red-400 hover:underline"
           >
-            Informasi Undangan Petugas
+            Daftar Petugas Baru
           </Link>
         </div>
 
         {/* Bantuan Pengujian Cepat (Minimalist & Discreet) */}
-        {isDemoMode && <div className="mt-4 pt-3 border-t border-dashed border-slate-200 dark:border-neutral-800 text-[11px] text-slate-500 dark:text-neutral-500 flex items-center justify-between">
+        <div className="mt-4 pt-3 border-t border-dashed border-slate-200 dark:border-neutral-800 text-[11px] text-slate-500 dark:text-neutral-500 flex items-center justify-between">
           <span>Akun Uji Coba:</span>
           <div className="flex items-center gap-2">
             <button
@@ -192,11 +189,9 @@ export default function Login() {
               Verifikator
             </button>
           </div>
-        </div>}
+        </div>
 
       </div>
     </div>
   );
 }
-
-

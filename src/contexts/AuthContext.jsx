@@ -1,67 +1,107 @@
 import React, { useState, useEffect } from 'react';
 import authAPI from '../services/authAPI';
+
 import { AuthContext } from './useAuth.js';
+
+
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [passwordRecovery, setPasswordRecovery] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    const hash = new URLSearchParams(window.location.hash.slice(1));
-    return ['recovery', 'invite'].includes(params.get('mode')) || ['recovery', 'invite'].includes(hash.get('type'));
-  });
 
+  // Periksa sesi aktif pada saat aplikasi pertama kali dimuat
   useEffect(() => {
-    let active = true;
-    let version = 0;
-    const refresh = async () => {
-      const current = ++version;
+    let isMounted = true;
+
+    async function checkAuth() {
       try {
         const response = await authAPI.getMe();
-        if (active && current === version) { setUser(response.user); setError(null); }
-      } catch (err) {
-        if (active && current === version) { setUser(null); setError(err.message); }
-      } finally { if (active && current === version) setLoading(false); }
-    };
-    let unsubscribe = () => {};
-    try {
-      unsubscribe = authAPI.onAuthStateChange((event) => {
-        if (!active) return;
-        if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
-        if (event === 'SIGNED_OUT') { ++version; setUser(null); setLoading(false); }
-        else setTimeout(() => { if (active) refresh(); }, 0);
-      });
-      refresh();
-    } catch (err) {
-      Promise.resolve().then(() => { if (active) { setError(err.message); setLoading(false); } });
+        if (isMounted && response?.success && response?.user) {
+          setUser(response.user);
+        }
+      } catch {
+        if (isMounted) {
+          setUser(null);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
     }
-    return () => { active = false; unsubscribe(); };
+
+    checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const invoke = async (method, ...args) => {
-    setError(null);
-    try { return await authAPI[method](...args); }
-    catch (err) { setError(err.message); throw err; }
-  };
   const login = async (email, password) => {
-    const response = await invoke('login', email, password);
-    setUser(response.user);
-    return response;
+    setError(null);
+    try {
+      const response = await authAPI.login(email, password);
+      if (response.success && response.user) {
+        setUser(response.user);
+        return { success: true, user: response.user };
+      }
+      throw new Error(response.message || 'Login gagal.');
+    } catch (err) {
+      const msg = err.message || 'Terjadi kesalahan saat login.';
+      setError(msg);
+      throw err;
+    }
   };
-  const logout = async () => { await invoke('logout'); setUser(null); };
-  const updatePassword = async (password) => {
-    await invoke('updatePassword', password);
-    await logout();
-    setPasswordRecovery(false);
+
+  const register = async (userData) => {
+    setError(null);
+    try {
+      const response = await authAPI.register(userData);
+      return response;
+    } catch (err) {
+      const msg = err.message || 'Terjadi kesalahan saat registrasi.';
+      setError(msg);
+      throw err;
+    }
   };
-  return <AuthContext.Provider value={{
-    user: passwordRecovery ? null : user, loading, error, login, logout, passwordRecovery, updatePassword,
-    register: (data) => invoke('register', data),
-    forgotPassword: (email) => invoke('forgotPassword', email),
-    isAuthenticated: !!user && !passwordRecovery,
-    isSuperAdmin: !passwordRecovery && user?.role === 'super_admin',
-    isVerifikator: !passwordRecovery && ['verifikator', 'super_admin'].includes(user?.role)
-  }}>{children}</AuthContext.Provider>;
+
+  const forgotPassword = async (email) => {
+    setError(null);
+    try {
+      const response = await authAPI.forgotPassword(email);
+      return response;
+    } catch (err) {
+      const msg = err.message || 'Terjadi kesalahan saat memproses permintaan.';
+      setError(msg);
+      throw err;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await authAPI.logout();
+    } catch (err) {
+      console.error('[Logout Error]:', err);
+    } finally {
+      setUser(null);
+    }
+  };
+
+  const value = {
+    user,
+    loading,
+    error,
+    login,
+    register,
+    forgotPassword,
+    logout,
+    isAuthenticated: !!user,
+    isSuperAdmin: user?.role === 'super_admin',
+    isVerifikator: user?.role === 'verifikator' || user?.role === 'super_admin'
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+
 

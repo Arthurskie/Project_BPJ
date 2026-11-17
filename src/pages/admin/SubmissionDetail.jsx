@@ -1,5 +1,4 @@
-import { isDemoMode } from '../../services/supabaseClient';
-import DocumentPreview from '../../components/DocumentPreview';
+﻿import DocumentPreview from '../../components/DocumentPreview';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
@@ -26,7 +25,7 @@ import { Skeleton, Spinner } from '../../components/Loading';
 import Alert from '../../components/Alert';
 import ConfirmModal from '../../components/ConfirmModal';
 
-import officialsAPI from '../../services/officialsAPI';
+import { OFFICIALS } from '../../domain/officials.js';
 
 export default function SubmissionDetail() {
   const { id } = useParams();
@@ -48,23 +47,10 @@ function SubmissionDetailContent({ id }) {
   // Form Verifikasi
   const [statusAction, setStatusAction] = useState(''); // Decision requires explicit selection.
   const [nomorSurat, setNomorSurat] = useState('');
-  const [officials, setOfficials] = useState([]);
-  const [officialsLoading, setOfficialsLoading] = useState(true);
-  const [officialsError, setOfficialsError] = useState('');
-  const [pejabatTTD, setPejabatTTD] = useState(officials[0]?.name || '');
+  const [pejabatTTD, setPejabatTTD] = useState(OFFICIALS[0].name);
   const [catatanVerifikasi, setCatatanVerifikasi] = useState('');
   const [isDuplicateNumber, setIsDuplicateNumber] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    officialsAPI.getActive().then(items => {
-      if (!active) return;
-      setOfficials(items);
-      setPejabatTTD(prev => prev || items[0]?.name || '');
-    }).catch(err => { if (active) setOfficialsError(err.message); }).finally(() => { if (active) setOfficialsLoading(false); });
-    return () => { active = false; };
-  }, []);
 
   // Load Data Permohonan & Audit Log
   const [revision, setRevision] = useState(0);
@@ -86,7 +72,7 @@ function SubmissionDetailContent({ id }) {
           if (res.data.catatanVerifikasi) setCatatanVerifikasi(res.data.catatanVerifikasi);
 
           // Ambil riwayat audit untuk permohonan ini
-          const logsRes = await auditLogAPI.getLogsByTarget(isDemoMode ? res.data.trackingCode : res.data.id);
+          const logsRes = await auditLogAPI.getLogsByTarget(res.data.trackingCode);
           if (active && logsRes.success) {
             setLogs(logsRes.data || []);
           }
@@ -157,7 +143,7 @@ function SubmissionDetailContent({ id }) {
         setAlert({ type: 'error', message: 'Nomor Surat tersebut sudah pernah digunakan. Silakan generate nomor baru.' });
         return;
       }
-      if (!officials.some(item => item.name === pejabatTTD)) {
+      if (!pejabatTTD) {
         setAlert({ type: 'error', message: 'Silakan pilih Pejabat Penanda Tangan.' });
         return;
       }
@@ -172,7 +158,6 @@ function SubmissionDetailContent({ id }) {
 
   // Submit verifikasi
   const handleConfirmSubmit = async () => {
-    if (statusAction === 'selesai' && !officials.some(item => item.name === pejabatTTD)) { setAlert({ type: 'error', message: officialsError || 'Pilih pejabat penanda tangan aktif.' }); return; }
     setSubmitting(true);
     try {
       const res = await submissionAPI.verifyAndComplete(submission.id, {
@@ -203,10 +188,9 @@ function SubmissionDetailContent({ id }) {
   // Cetak Surat Resmi (Browser Print / PDF)
   const handlePrintLetter = () => {
     if (!submission) return;
-    const selectedOfficial = officials.find((o) => o.name === pejabatTTD);
-    if (!selectedOfficial) { setAlert({ type: 'error', message: 'Pejabat penanda tangan tidak tersedia. Muat ulang daftar pejabat.' }); return; }
+    const selectedOfficial = OFFICIALS.find((o) => o.name === pejabatTTD) || OFFICIALS[0];
     const html = letterGeneratorAPI.generateLetterHTML({
-      nomorSurat: nomorSurat || submission.nomorSurat || '',
+      nomorSurat: nomorSurat || submission.nomorSurat || '470 / 001 / KEL.CKR / XI / 2026',
       jenisSurat: submission.jenisSurat,
       nama: submission.nama,
       nik: submission.nik,
@@ -223,10 +207,9 @@ function SubmissionDetailContent({ id }) {
   // Download Dokumen Word (.doc)
   const handleDownloadWord = () => {
     if (!submission) return;
-    const selectedOfficial = officials.find((o) => o.name === pejabatTTD);
-    if (!selectedOfficial) { setAlert({ type: 'error', message: 'Pejabat penanda tangan tidak tersedia. Muat ulang daftar pejabat.' }); return; }
+    const selectedOfficial = OFFICIALS.find((o) => o.name === pejabatTTD) || OFFICIALS[0];
     const html = letterGeneratorAPI.generateLetterHTML({
-      nomorSurat: nomorSurat || submission.nomorSurat || '',
+      nomorSurat: nomorSurat || submission.nomorSurat || '470 / 001 / KEL.CKR / XI / 2026',
       jenisSurat: submission.jenisSurat,
       nama: submission.nama,
       nik: submission.nik,
@@ -245,28 +228,28 @@ function SubmissionDetailContent({ id }) {
     switch (status) {
       case 'pending':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50  text-amber-700  border border-amber-200 ">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40">
             <Clock className="w-3.5 h-3.5" />
             Menunggu Verifikasi
           </span>
         );
       case 'diproses':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50  text-blue-700  border border-blue-200 ">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40">
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
             Sedang Diproses
           </span>
         );
       case 'selesai':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50  text-emerald-700  border border-emerald-200 ">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40">
             <CheckCircle2 className="w-3.5 h-3.5" />
             Selesai / Terbit
           </span>
         );
       case 'ditolak':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50  text-red-700  border border-red-200 ">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/40">
             <XCircle className="w-3.5 h-3.5" />
             Ditolak
           </span>
@@ -293,15 +276,15 @@ function SubmissionDetailContent({ id }) {
 
   if (!submission) {
     return (
-      <div className="bg-white  border border-[#e7e4dc] bg-white rounded-2xl p-8 text-center space-y-4">
+      <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl p-8 text-center space-y-4">
         <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
-        <h3 className="text-base font-bold text-[#292524] ">Permohonan Tidak Ditemukan</h3>
-        <p className="text-xs text-[#78716c] ">
+        <h3 className="text-base font-bold text-slate-900 dark:text-white">Permohonan Tidak Ditemukan</h3>
+        <p className="text-xs text-slate-500 dark:text-neutral-400">
           Berkas permohonan dengan ID tersebut tidak ditemukan dalam sistem.
         </p>
         <Link
           to="/admin/submissions"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#b32d32]  text-white  rounded-lg text-xs font-semibold"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-xs font-semibold"
         >
           <ArrowLeft className="w-4 h-4" />
           Kembali ke Daftar Permohonan
@@ -318,25 +301,25 @@ function SubmissionDetailContent({ id }) {
           <button
             type="button"
             onClick={() => navigate('/admin/submissions')}
-            className="p-2 bg-white  border border-[#e7e4dc]  hover:bg-[#f8f7f3]  text-[#44403c]  rounded-2xl transition-colors cursor-pointer"
+            className="p-2 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 hover:bg-slate-50 dark:hover:bg-neutral-800 text-slate-700 dark:text-neutral-300 rounded-lg transition-colors cursor-pointer"
             title="Kembali"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-bold text-[#292524]  tracking-tight">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
                 Verifikasi Permohonan Surat
               </h2>
               {getStatusBadge(submission.status)}
             </div>
-            <p className="text-xs text-[#78716c]  mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
               Kode Tiket:{' '}
-              <span className="font-mono font-bold text-[#292524] ">
+              <span className="font-mono font-bold text-red-700 dark:text-red-400">
                 {submission.trackingCode}
               </span>{' '}
               &bull; Sumber:{' '}
-              <span className="font-semibold text-[#44403c] ">
+              <span className="font-semibold text-slate-700 dark:text-neutral-300">
                 {submission.source === 'walk-in' ? 'Loket Pelayanan (Walk-in)' : 'Portal Publik (Online)'}
               </span>
             </p>
@@ -349,7 +332,7 @@ function SubmissionDetailContent({ id }) {
             <button
               type="button"
               onClick={handlePrintLetter}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#b32d32] hover:bg-[#92252a] text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Cetak / PDF</span>
@@ -357,7 +340,7 @@ function SubmissionDetailContent({ id }) {
             <button
               type="button"
               onClick={handleDownloadWord}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white  border border-[#d9d5cb]  text-[#44403c]  hover:bg-[#f8f7f3]  rounded-2xl text-xs font-semibold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-700 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-800 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Unduh DOC</span>
@@ -376,70 +359,70 @@ function SubmissionDetailContent({ id }) {
       {/* Grid 2 Kolom: Data Pemohon (Read-only) & Form Verifikasi (Editable) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Kolom Kiri: Detail Pengajuan Warga (Read-Only) */}
-        <div className="bg-white  border border-[#e7e4dc] bg-white rounded-2xl overflow-hidden shadow-xs">
-          <div className="px-5 py-3.5 bg-[#f8f7f3]/70  border-b border-[#e7e4dc]  flex items-center gap-2">
-            <User className="w-4 h-4 text-[#44403c] " />
-            <h3 className="text-sm font-semibold text-[#292524] ">
+        <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl overflow-hidden shadow-xs">
+          <div className="px-5 py-3.5 bg-slate-50/70 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-800 flex items-center gap-2">
+            <User className="w-4 h-4 text-slate-700 dark:text-neutral-300" />
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">
               Data Pemohon & Berkas Pengajuan
             </h3>
           </div>
 
           <div className="p-5 space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-[#e7e4dc] ">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100 dark:border-neutral-800">
               <div>
-                <span className="text-xs font-medium text-[#78716c]  uppercase tracking-wider block mb-1">
+                <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500 uppercase tracking-wider block mb-1">
                   Nama Lengkap Pemohon
                 </span>
-                <p className="font-bold text-sm text-[#292524] ">{submission.nama}</p>
+                <p className="font-bold text-sm text-slate-900 dark:text-white">{submission.nama}</p>
               </div>
               <div>
-                <span className="text-xs font-medium text-[#78716c]  uppercase tracking-wider block mb-1">
+                <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500 uppercase tracking-wider block mb-1">
                   Nomor Induk Kependudukan (NIK)
                 </span>
-                <p className="font-mono font-semibold text-[#292524]  bg-[#f1efe8]  px-2 py-0.5 rounded inline-block">
+                <p className="font-mono font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 rounded inline-block">
                   {submission.nik}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-[#e7e4dc] ">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100 dark:border-neutral-800">
               <div>
-                <span className="text-xs font-medium text-[#78716c]  uppercase tracking-wider block mb-1">
+                <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500 uppercase tracking-wider block mb-1">
                   Jenis Surat Permohonan
                 </span>
-                <p className="font-semibold text-[#292524]  flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-[#b32d32]" />
+                <p className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-red-600" />
                   {submission.jenisSurat}
                 </p>
               </div>
               <div>
-                <span className="text-xs font-medium text-[#78716c]  uppercase tracking-wider block mb-1">
+                <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500 uppercase tracking-wider block mb-1">
                   Nomor Kontak / WhatsApp
                 </span>
-                <p className="font-semibold text-[#292524] ">{submission.noHp || '-'}</p>
+                <p className="font-semibold text-slate-800 dark:text-neutral-200">{submission.noHp || '-'}</p>
               </div>
             </div>
 
-            <div className="pb-4 border-b border-[#e7e4dc] ">
-              <span className="text-xs font-medium text-[#78716c]  uppercase tracking-wider block mb-1">
+            <div className="pb-4 border-b border-slate-100 dark:border-neutral-800">
+              <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500 uppercase tracking-wider block mb-1">
                 Alamat Domisili KTP
               </span>
-              <p className="text-[#44403c]  leading-relaxed">{submission.alamat || '-'}</p>
+              <p className="text-slate-700 dark:text-neutral-300 leading-relaxed">{submission.alamat || '-'}</p>
             </div>
 
-            <div className="pb-4 border-b border-[#e7e4dc] ">
-              <span className="text-xs font-medium text-[#78716c]  uppercase tracking-wider block mb-1">
+            <div className="pb-4 border-b border-slate-100 dark:border-neutral-800">
+              <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500 uppercase tracking-wider block mb-1">
                 Keperluan / Keterangan Pengajuan
               </span>
-              <div className="p-3 bg-[#f8f7f3]  border border-[#e7e4dc]  rounded-lg text-[#292524] ">
+              <div className="p-3 bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 rounded-lg text-slate-800 dark:text-neutral-200">
                 {submission.keperluan || '-'}
               </div>
             </div>
 
-            <section className="pb-4 border-b border-[#e7e4dc] " aria-label="Informasi tambahan pengajuan"><h4 className="font-semibold mb-2">Informasi tambahan</h4><dl className="space-y-2"><div><dt>Email pemohon</dt><dd>{submission.email || 'Tidak dicantumkan'}</dd></div><div><dt>Keterangan warga</dt><dd className="whitespace-pre-wrap">{submission.keterangan || 'Tidak dicantumkan'}</dd></div><div><dt>Sumber pengajuan</dt><dd>{submission.source === 'walk-in' ? 'Loket langsung' : 'Formulir warga'}</dd></div></dl>{submission.letterTypeSnapshot && <div className="mt-3"><h4 className="font-semibold">Persyaratan saat diajukan ({submission.letterTypeSnapshot.code})</h4><ul className="list-disc pl-4">{submission.letterTypeSnapshot.requirements.map(item => <li key={item}>{item}</li>)}</ul></div>}</section>
+            <section className="pb-4 border-b border-slate-100 dark:border-neutral-800" aria-label="Informasi tambahan pengajuan"><h4 className="font-semibold mb-2">Informasi tambahan</h4><dl className="space-y-2"><div><dt>Email pemohon</dt><dd>{submission.email || 'Tidak dicantumkan'}</dd></div><div><dt>Keterangan warga</dt><dd className="whitespace-pre-wrap">{submission.keterangan || 'Tidak dicantumkan'}</dd></div><div><dt>Sumber pengajuan</dt><dd>{submission.source === 'walk-in' ? 'Loket langsung' : 'Formulir warga'}</dd></div></dl>{submission.letterTypeSnapshot && <div className="mt-3"><h4 className="font-semibold">Persyaratan saat diajukan ({submission.letterTypeSnapshot.code})</h4><ul className="list-disc pl-4">{submission.letterTypeSnapshot.requirements.map(item => <li key={item}>{item}</li>)}</ul></div>}</section>
             {/* Berkas Lampiran Syarat */}
             <div>
-              <span className="text-xs font-medium text-[#78716c]  uppercase tracking-wider block mb-2">
+              <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500 uppercase tracking-wider block mb-2">
                 Dokumen Lampiran Warga ({submission.files?.length || 0})
               </span>
               {submission.files && submission.files.length > 0 ? (
@@ -447,36 +430,36 @@ function SubmissionDetailContent({ id }) {
                   {submission.files.map((file, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-2.5 bg-[#f8f7f3]  border border-[#e7e4dc]  rounded-lg"
+                      className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 rounded-lg"
                     >
                       <div className="flex items-center gap-2 truncate">
                         <FileCheck2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span className="font-medium text-[#292524]  truncate">
+                        <span className="font-medium text-slate-800 dark:text-neutral-200 truncate">
                           {file.name || `Lampiran_${idx + 1}.pdf`}
                         </span>
                       </div>
-                      <span className="text-xs text-[#78716c] shrink-0">
-                        <button type="button" onClick={() => setPreviewFile(file)} className="mr-3 text-xs font-medium text-[#292524] underline ">Pratinjau Dokumen</button>
+                      <span className="text-[10px] text-slate-400 shrink-0">
+                        <button type="button" onClick={() => setPreviewFile(file)} className="mr-3 text-xs font-medium text-red-700 underline dark:text-red-400">Pratinjau Dokumen</button>
                           {file.size ? `${(file.size / 1024).toFixed(0)} KB` : 'Dokumen'}
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-[#78716c]  italic">
+                <p className="text-slate-400 dark:text-neutral-500 italic">
                   Tidak ada file lampiran digital yang disertakan.
                 </p>
               )}
             </div>
 
             {/* Waktu Masuk & Petugas Verifikator Terakhir */}
-            <div className="pt-2 text-xs text-[#78716c]  flex items-center justify-between">
+            <div className="pt-2 text-[11px] text-slate-500 dark:text-neutral-400 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5" />
                 <span>Masuk: {new Date(submission.createdAt).toLocaleString('id-ID')}</span>
               </div>
               {submission.verifiedBy && (
-                <span className="font-medium text-[#44403c] ">
+                <span className="font-medium text-slate-700 dark:text-neutral-300">
                   Petugas: {submission.verifiedBy}
                 </span>
               )}
@@ -485,32 +468,29 @@ function SubmissionDetailContent({ id }) {
         </div>
 
         {/* Kolom Kanan: Form Pemrosesan & Verifikasi Internal Admin */}
-        <div className="bg-white  border border-[#e7e4dc] bg-white rounded-2xl overflow-hidden shadow-xs">
-          <div className="px-5 py-3.5 bg-[#f8f7f3]/70  border-b border-[#e7e4dc]  flex items-center justify-between">
+        <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl overflow-hidden shadow-xs">
+          <div className="px-5 py-3.5 bg-slate-50/70 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <FileCheck2 className="w-4 h-4 text-[#b32d32] " />
-              <h3 className="text-sm font-semibold text-[#292524] ">
+              <FileCheck2 className="w-4 h-4 text-red-700 dark:text-red-400" />
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">
                 Panel Verifikasi & Keputusan
               </h3>
             </div>
-
+            
           </div>
 
-          {officialsLoading && <p role="status">Memuat pejabat penanda tangan…</p>}
-      {officialsError && <p role="alert">{officialsError}</p>}
-      {!officialsLoading && !officialsError && !officials.length && <p role="status">Belum ada pejabat penanda tangan aktif.</p>}
-      <form onSubmit={handleSubmitPrompt} className="p-5 space-y-4 text-xs">
+          <form onSubmit={handleSubmitPrompt} className="p-5 space-y-4 text-xs">
             {/* Pilihan Keputusan Status */}
             <div>
-              <label className="block text-xs font-semibold text-[#44403c]  uppercase tracking-wider mb-2">
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider mb-2">
                 Keputusan Status Surat <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label
                   className={`flex items-center gap-2.5 p-3 rounded-lg border cursor-pointer transition-all ${
                     statusAction === 'selesai'
-                      ? 'border-emerald-500 bg-emerald-50/50  text-emerald-900  font-semibold'
-                      : 'border-[#e7e4dc]  hover:bg-[#f8f7f3]  text-[#57534e] '
+                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300 font-semibold'
+                      : 'border-slate-200 dark:border-neutral-800 hover:bg-slate-50 dark:hover:bg-neutral-800/40 text-slate-600 dark:text-neutral-400'
                   }`}
                 >
                   <input
@@ -528,8 +508,8 @@ function SubmissionDetailContent({ id }) {
                 <label
                   className={`flex items-center gap-2.5 p-3 rounded-lg border cursor-pointer transition-all ${
                     statusAction === 'ditolak'
-                      ? 'border-red-500 bg-red-50/50  text-red-900  font-semibold'
-                      : 'border-[#e7e4dc]  hover:bg-[#f8f7f3]  text-[#57534e] '
+                      ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20 text-red-900 dark:text-red-300 font-semibold'
+                      : 'border-slate-200 dark:border-neutral-800 hover:bg-slate-50 dark:hover:bg-neutral-800/40 text-slate-600 dark:text-neutral-400'
                   }`}
                 >
                   <input
@@ -548,18 +528,18 @@ function SubmissionDetailContent({ id }) {
 
             {/* Form Bidang Internal untuk Persetujuan (Nomor Surat & Pejabat TTD) */}
             {statusAction === 'selesai' && (
-              <div className="space-y-4 pt-2 border-t border-[#e7e4dc] ">
+              <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-neutral-800">
                 {/* Nomor Surat Resmi */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-[#44403c]  uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider">
                       Nomor Surat Resmi Instansi <span className="text-red-500">*</span>
                     </label>
                     <button
                       type="button"
                       onClick={handleAutoGenerateNumber}
                       disabled={generatingNumber}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#292524] hover:underline cursor-pointer"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 dark:text-red-400 hover:underline cursor-pointer"
                     >
                       <RefreshCw className={`w-3 h-3 ${generatingNumber ? 'animate-spin' : ''}`} />
                       <span>{generatingNumber ? 'Menghasilkan...' : 'Generate Nomor'}</span>
@@ -570,19 +550,19 @@ function SubmissionDetailContent({ id }) {
                     value={nomorSurat}
                     onChange={(e) => setNomorSurat(e.target.value)}
                     placeholder="Contoh: 470 / 001 / KEL.CKR / XI / 2026"
-                    className={`w-full px-3 py-2 font-mono bg-[#f8f7f3]  border rounded-lg text-xs text-[#292524]  focus:outline-none transition-colors ${
+                    className={`w-full px-3 py-2 font-mono bg-slate-50 dark:bg-neutral-950 border rounded-lg text-xs text-slate-900 dark:text-white focus:outline-none transition-colors ${
                       isDuplicateNumber
-                        ? 'border-red-500 focus:border-[#b32d32] ring-1 ring-red-500'
-                        : 'border-[#d9d5cb]  focus:border-[#b32d32]'
+                        ? 'border-red-500 focus:border-red-600 ring-1 ring-red-500'
+                        : 'border-slate-300 dark:border-neutral-700 focus:border-red-600'
                     }`}
                   />
                   {isDuplicateNumber ? (
-                    <p className="text-xs text-red-600  mt-1 flex items-center gap-1">
+                    <p className="text-[11px] text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" />
                       Nomor surat ini sudah terdaftar pada surat lain. Mohon gunakan nomor urut berbeda.
                     </p>
                   ) : (
-                    <p className="text-xs text-[#78716c]  mt-1">
+                    <p className="text-[10px] text-slate-400 dark:text-neutral-500 mt-1">
                       Format: 470 / [Nomor Urut 3 Digit] / [Kode Instansi] / [Bulan Romawi] / [Tahun]
                     </p>
                   )}
@@ -590,15 +570,15 @@ function SubmissionDetailContent({ id }) {
 
                 {/* Pejabat Penanda Tangan */}
                 <div>
-                  <label className="block text-xs font-semibold text-[#44403c]  uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider mb-1">
                     Pejabat Penanda Tangan (TTD) <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={pejabatTTD}
                     onChange={(e) => setPejabatTTD(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#f8f7f3]  border border-[#d9d5cb]  rounded-lg text-xs text-[#292524]  font-medium focus:outline-none focus:border-[#b32d32] cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-xs text-slate-900 dark:text-white font-medium focus:outline-none focus:border-red-600 cursor-pointer"
                   >
-                    {officials.map((o) => (
+                    {OFFICIALS.map((o) => (
                       <option key={o.nip} value={o.name}>
                         {o.name} &mdash; {o.role} (NIP. {o.nip})
                       </option>
@@ -609,8 +589,8 @@ function SubmissionDetailContent({ id }) {
             )}
 
             {/* Catatan Verifikasi / Alasan Penolakan */}
-            <div className="pt-2 border-t border-[#e7e4dc] ">
-              <label className="block text-xs font-semibold text-[#44403c]  uppercase tracking-wider mb-1">
+            <div className="pt-2 border-t border-slate-100 dark:border-neutral-800">
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider mb-1">
                 {statusAction === 'ditolak' ? (
                   <>
                     Alasan Penolakan (Wajib Diisi) <span className="text-red-500">*</span>
@@ -628,9 +608,9 @@ function SubmissionDetailContent({ id }) {
                     ? 'Tuliskan secara jelas mengapa permohonan ini ditolak (misal: Foto KTP buram, Surat Pengantar RT/RW belum dilampirkan, dsb)...'
                     : 'Catatan tambahan atau instruksi pengambilan surat asli di kantor kelurahan...'
                 }
-                className="w-full p-2.5 bg-[#f8f7f3]  border border-[#d9d5cb]  rounded-lg text-xs text-[#292524]  focus:outline-none focus:border-[#b32d32]"
+                className="w-full p-2.5 bg-slate-50 dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-none focus:border-red-600"
               />
-              <p className="text-xs text-[#78716c] mt-1">
+              <p className="text-[10px] text-slate-400 mt-1">
                 Pesan ini dapat dilihat oleh pemohon saat mengecek kode tiket di portal publik.
               </p>
             </div>
@@ -639,16 +619,16 @@ function SubmissionDetailContent({ id }) {
             <div className="pt-3 flex items-center justify-end gap-2.5">
               <Link
                 to="/admin/submissions"
-                className="px-4 py-2 bg-white  hover:bg-[#f8f7f3]  border border-[#d9d5cb]  text-[#44403c]  rounded-2xl font-semibold transition-colors"
+                className="px-4 py-2 bg-white dark:bg-neutral-800 hover:bg-slate-50 dark:hover:bg-neutral-700 border border-slate-300 dark:border-neutral-700 text-slate-700 dark:text-neutral-300 rounded-lg font-semibold transition-colors"
               >
                 Kembali
               </Link>
               <button
                 type="submit"
-                disabled={!statusAction || (statusAction === 'selesai' && (officialsLoading || !!officialsError || !officials.length)) || submitting || (statusAction === 'selesai' && isDuplicateNumber)}
+                disabled={!statusAction || submitting || (statusAction === 'selesai' && isDuplicateNumber)}
                 className={`px-5 py-2 rounded-lg font-semibold text-white shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 ${
                   statusAction === 'ditolak'
-                    ? 'bg-[#b32d32] hover:bg-[#92252a]'
+                    ? 'bg-red-700 hover:bg-red-800'
                     : 'bg-emerald-600 hover:bg-emerald-700'
                 }`}
               >
@@ -667,40 +647,40 @@ function SubmissionDetailContent({ id }) {
       </div>
 
       {/* Riwayat Jejak Audit (Audit Trail Timeline) */}
-      <div className="bg-white  border border-[#e7e4dc] bg-white rounded-2xl overflow-hidden shadow-xs">
-        <div className="px-5 py-3.5 bg-[#f8f7f3]/70  border-b border-[#e7e4dc]  flex items-center justify-between">
+      <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl overflow-hidden shadow-xs">
+        <div className="px-5 py-3.5 bg-slate-50/70 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-[#44403c] " />
-            <h3 className="text-sm font-semibold text-[#292524] ">
+            <History className="w-4 h-4 text-slate-700 dark:text-neutral-300" />
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">
               Audit Trail & Riwayat Aktivitas Permohonan
             </h3>
           </div>
-          <span className="text-xs text-[#78716c]">Total: {logs.length} catatan</span>
+          <span className="text-[11px] text-slate-400">Total: {logs.length} catatan</span>
         </div>
 
         <div className="p-5">
           {logs.length === 0 ? (
-            <p className="text-xs text-[#78716c]  italic py-2">
+            <p className="text-xs text-slate-400 dark:text-neutral-500 italic py-2">
               Belum ada riwayat aktivitas yang tercatat untuk permohonan ini.
             </p>
           ) : (
-            <div className="relative border-l-2 border-[#e7e4dc]  ml-3 space-y-4 py-1">
+            <div className="relative border-l-2 border-slate-200 dark:border-neutral-800 ml-3 space-y-4 py-1">
               {logs.map((log) => (
                 <div key={log.id} className="relative pl-6">
-                  <div className="absolute -left-[7px] top-1.5 w-3 h-3 rounded-full bg-white  border-2 border-[#b32d32] " />
-                  <div className="bg-[#f8f7f3]  p-3 rounded-lg border border-[#e7e4dc] ">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
-                      <p className="font-bold text-[#292524] ">
+                  <div className="absolute -left-[7px] top-1.5 w-3 h-3 rounded-full bg-white dark:bg-neutral-900 border-2 border-red-700 dark:border-red-500" />
+                  <div className="bg-slate-50 dark:bg-neutral-950/60 p-3 rounded-lg border border-slate-200 dark:border-neutral-800">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px]">
+                      <p className="font-bold text-slate-900 dark:text-white">
                         {log.adminName}
-                        <span className="font-normal text-[#78716c] ml-1.5">
+                        <span className="font-normal text-slate-500 ml-1.5">
                           ({log.action})
                         </span>
                       </p>
-                      <span className="text-[#78716c] font-mono text-xs">
+                      <span className="text-slate-400 font-mono text-[10px]">
                         {new Date(log.timestamp).toLocaleString('id-ID')}
                       </span>
                     </div>
-                    <p className="text-xs text-[#44403c]  mt-1 leading-relaxed">
+                    <p className="text-xs text-slate-700 dark:text-neutral-300 mt-1 leading-relaxed">
                       {log.details}
                     </p>
                   </div>

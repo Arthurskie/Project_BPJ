@@ -17,18 +17,13 @@ import { useAuth } from '../../contexts/useAuth';
 import Alert from '../../components/Alert';
 import { Spinner } from '../../components/Loading';
 
-import officialsAPI from '../../services/officialsAPI';
+import { OFFICIALS } from '../../domain/officials.js';
 
 
 
 export default function WalkInSubmission() {
   const navigate = useNavigate();
-  const [letterTypes, setLetterTypes] = useState([]);
-  const [typesLoading, setTypesLoading] = useState(true);
-  const [typesError, setTypesError] = useState('');
-  const [officials, setOfficials] = useState([]);
-  const [officialsLoading, setOfficialsLoading] = useState(true);
-  const [officialsError, setOfficialsError] = useState('');
+  const [letterTypes] = useState(() => letterTypeAPI.getActive());
   const SURAT_TYPES = letterTypes.map(item => item.name);
   const { user } = useAuth();
 
@@ -42,7 +37,7 @@ export default function WalkInSubmission() {
     keperluan: '',
     status: 'diproses', // 'diproses' | 'selesai'
     nomorSurat: '',
-    pejabatTTD: officials[0]?.name || '',
+    pejabatTTD: OFFICIALS[0].name,
     catatanPetugas: ''
   });
 
@@ -51,26 +46,6 @@ export default function WalkInSubmission() {
   const [isDuplicateNumber, setIsDuplicateNumber] = useState(false);
   const [alert, setAlert] = useState(null);
   const [createdResult, setCreatedResult] = useState(null);
-
-  useEffect(() => {
-    let active = true;
-    letterTypeAPI.getActive().then(items => {
-      if (!active) return;
-      setLetterTypes(items);
-      setFormData(prev => ({ ...prev, jenisSurat: prev.jenisSurat || items[0]?.name || '' }));
-    }).catch(err => { if (active) setTypesError(err.message); }).finally(() => { if (active) setTypesLoading(false); });
-    return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    officialsAPI.getActive().then(items => {
-      if (!active) return;
-      setOfficials(items);
-      setFormData(prev => ({ ...prev, pejabatTTD: prev.pejabatTTD || items[0]?.name || '' }));
-    }).catch(err => { if (active) setOfficialsError(err.message); }).finally(() => { if (active) setOfficialsLoading(false); });
-    return () => { active = false; };
-  }, []);
 
   // Auto check nomor surat duplikasi
   useEffect(() => {
@@ -112,15 +87,11 @@ export default function WalkInSubmission() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (typesLoading || typesError) return;
     setAlert(null);
 
-    if (!letterTypes.some(item => item.name === formData.jenisSurat)) {
+    if (!letterTypeAPI.getActive().some(item => item.name === formData.jenisSurat)) {
       setAlert({ type: 'error', message: 'Pilih jenis surat aktif terlebih dahulu.' });
       return;
-    }
-    if (formData.status === 'selesai' && !officials.some(item => item.name === formData.pejabatTTD)) {
-      setAlert({ type: 'error', message: officialsError || 'Pilih pejabat penanda tangan aktif.' }); return;
     }
     // Validasi dasar
     if (formData.nik.trim().length !== 16 || !/^\d+$/.test(formData.nik.trim())) {
@@ -182,10 +153,9 @@ export default function WalkInSubmission() {
   // Cetak Surat Resmi dari Hasil Buat
   const handlePrintLetter = () => {
     if (!createdResult) return;
-    const selectedOfficial = officials.find((o) => o.name === createdResult.pejabatTTD);
-    if (!selectedOfficial) { setAlert({ type: 'error', message: 'Pejabat penanda tangan tidak tersedia. Muat ulang daftar pejabat.' }); return; }
+    const selectedOfficial = OFFICIALS.find((o) => o.name === createdResult.pejabatTTD) || OFFICIALS[0];
     const html = letterGeneratorAPI.generateLetterHTML({
-      nomorSurat: createdResult.nomorSurat || '',
+      nomorSurat: createdResult.nomorSurat || '470 / 001 / KEL.CKR / XI / 2026',
       jenisSurat: createdResult.jenisSurat,
       nama: createdResult.nama,
       nik: createdResult.nik,
@@ -202,10 +172,9 @@ export default function WalkInSubmission() {
   // Unduh DOC
   const handleDownloadWord = () => {
     if (!createdResult) return;
-    const selectedOfficial = officials.find((o) => o.name === createdResult.pejabatTTD);
-    if (!selectedOfficial) { setAlert({ type: 'error', message: 'Pejabat penanda tangan tidak tersedia. Muat ulang daftar pejabat.' }); return; }
+    const selectedOfficial = OFFICIALS.find((o) => o.name === createdResult.pejabatTTD) || OFFICIALS[0];
     const html = letterGeneratorAPI.generateLetterHTML({
-      nomorSurat: createdResult.nomorSurat || '',
+      nomorSurat: createdResult.nomorSurat || '470 / 001 / KEL.CKR / XI / 2026',
       jenisSurat: createdResult.jenisSurat,
       nama: createdResult.nama,
       nik: createdResult.nik,
@@ -224,35 +193,35 @@ export default function WalkInSubmission() {
   if (createdResult) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
-        <div className="bg-white  border border-[#e7e4dc] bg-white rounded-2xl p-6 sm:p-8 shadow-xs text-center space-y-5">
-          <div className="w-14 h-14 bg-emerald-50  border border-emerald-200  rounded-2xl flex items-center justify-center mx-auto text-emerald-600 ">
+        <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl p-6 sm:p-8 shadow-xs text-center space-y-5">
+          <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="w-8 h-8" />
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold text-[#292524]  tracking-tight">
+            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
               Permohonan Walk-in Berhasil Disimpan!
             </h2>
-            <p className="text-xs text-[#78716c]  mt-1 max-w-md mx-auto">
+            <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1 max-w-md mx-auto">
               Data permohonan surat masyarakat telah berhasil didaftarkan ke sistem loket pelayanan.
             </p>
           </div>
 
           {/* Kotak Nomor Tiket */}
-          <div className="p-4 bg-[#f8f7f3]  border border-[#e7e4dc] bg-white rounded-2xl max-w-md mx-auto text-center">
-            <span className="text-xs font-semibold text-[#78716c] uppercase tracking-wider block">
+          <div className="p-4 bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 rounded-xl max-w-md mx-auto text-center">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
               Nomor Tiket / Kode Pelacakan
             </span>
-            <span className="font-mono text-2xl font-semibold text-red-700  block mt-1">
+            <span className="font-mono text-2xl font-semibold text-red-700 dark:text-red-400 block mt-1">
               {createdResult.trackingCode}
             </span>
-            <div className="mt-3 pt-3 border-t border-[#e7e4dc]  text-xs text-[#57534e]  flex justify-between">
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-neutral-800 text-xs text-slate-600 dark:text-neutral-400 flex justify-between">
               <span>Pemohon: <strong>{createdResult.nama}</strong></span>
               <span>Status: <strong className="uppercase text-emerald-600">{createdResult.status}</strong></span>
             </div>
             {createdResult.nomorSurat && (
-              <div className="mt-2 text-xs text-[#57534e]  text-left">
-                <span>No. Surat Resmi: <strong className="font-mono text-[#292524] ">{createdResult.nomorSurat}</strong></span>
+              <div className="mt-2 text-xs text-slate-600 dark:text-neutral-400 text-left">
+                <span>No. Surat Resmi: <strong className="font-mono text-slate-900 dark:text-white">{createdResult.nomorSurat}</strong></span>
               </div>
             )}
           </div>
@@ -263,7 +232,7 @@ export default function WalkInSubmission() {
               <button
                 type="button"
                 onClick={handlePrintLetter}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#b32d32] hover:bg-[#92252a] text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
                 <span>Cetak Surat Sekarang (PDF)</span>
@@ -271,7 +240,7 @@ export default function WalkInSubmission() {
               <button
                 type="button"
                 onClick={handleDownloadWord}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white  border border-[#d9d5cb]  text-[#44403c]  hover:bg-[#f8f7f3]  rounded-2xl text-xs font-semibold transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-neutral-800 border border-slate-300 dark:border-neutral-700 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
               >
                 <Download className="w-4 h-4" />
                 <span>Unduh Word (.doc)</span>
@@ -280,7 +249,7 @@ export default function WalkInSubmission() {
           )}
 
           {/* Navigasi Lanjutan */}
-          <div className="pt-4 border-t border-[#e7e4dc]  flex items-center justify-center gap-3">
+          <div className="pt-4 border-t border-slate-100 dark:border-neutral-800 flex items-center justify-center gap-3">
             <button
               type="button"
               onClick={() => {
@@ -294,11 +263,11 @@ export default function WalkInSubmission() {
                   keperluan: '',
                   status: 'diproses',
                   nomorSurat: '',
-                  pejabatTTD: officials[0]?.name || '',
+                  pejabatTTD: OFFICIALS[0].name,
                   catatanPetugas: ''
                 });
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#f1efe8]  hover:bg-[#e7e4dc]  text-[#44403c]  rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 dark:bg-neutral-800 hover:bg-slate-200 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>Input Permohonan Lain</span>
@@ -306,7 +275,7 @@ export default function WalkInSubmission() {
             <button
               type="button"
               onClick={() => navigate('/admin/submissions')}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#b32d32]  text-white  rounded-lg text-xs font-semibold hover:bg-[#92252a]  transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-xs font-semibold hover:bg-slate-800 dark:hover:bg-neutral-100 transition-colors cursor-pointer"
             >
               <span>Lihat Daftar Permohonan</span>
             </button>
@@ -323,16 +292,16 @@ export default function WalkInSubmission() {
         <div className="flex items-center gap-3">
           <Link
             to="/admin/submissions"
-            className="p-2 bg-white  border border-[#e7e4dc]  hover:bg-[#f8f7f3]  text-[#44403c]  rounded-2xl transition-colors cursor-pointer"
+            className="p-2 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 hover:bg-slate-50 dark:hover:bg-neutral-800 text-slate-700 dark:text-neutral-300 rounded-lg transition-colors cursor-pointer"
             title="Kembali"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h2 className="text-2xl font-semibold text-[#292524]  tracking-tight">
+            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
               Loket Pelayanan
             </h2>
-            <p className="text-xs text-[#78716c]  mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
               Pendaftaran langsung oleh petugas loket untuk warga yang hadir tatap muka di kelurahan.
             </p>
           </div>
@@ -347,30 +316,24 @@ export default function WalkInSubmission() {
       )}
 
       {/* Form Card */}
-      {typesLoading && <p role="status">Memuat jenis surat…</p>}
-      {typesError && <p role="alert">{typesError}</p>}
-      {!typesLoading && !typesError && !letterTypes.length && <p role="status">Belum ada jenis surat aktif.</p>}
-      {officialsLoading && <p role="status">Memuat pejabat penanda tangan…</p>}
-      {officialsError && <p role="alert">{officialsError}</p>}
-      {!officialsLoading && !officialsError && !officials.length && <p role="status">Belum ada pejabat penanda tangan aktif.</p>}
-      <form onSubmit={handleSubmit} className="bg-white  border border-[#e7e4dc] bg-white rounded-2xl shadow-xs overflow-hidden">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-xs overflow-hidden">
         {/* Section 1: Data Identitas Pemohon */}
-        <div className="p-6 border-b border-[#e7e4dc] ">
+        <div className="p-6 border-b border-slate-100 dark:border-neutral-800">
           <div className="flex items-center gap-2.5 mb-4">
-            <span className="w-6 h-6 rounded-full bg-[#fdf0ef] text-[#876a30]  font-bold text-xs flex items-center justify-center shrink-0">
+            <span className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-bold text-xs flex items-center justify-center shrink-0">
               1
             </span>
             <div>
-              <h3 className="text-sm font-semibold text-[#292524] ">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Identitas Pemohon
               </h3>
-              <p className="text-xs text-[#78716c]">Pastikan NIK dan identitas sesuai KTP asli pemohon</p>
+              <p className="text-[11px] text-slate-400">Pastikan NIK dan identitas sesuai KTP asli pemohon</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block text-xs font-semibold text-[#44403c]  uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider mb-1">
                 Nomor Induk Kependudukan (NIK) <span className="text-red-500">*</span>
               </label>
               <input
@@ -381,12 +344,12 @@ export default function WalkInSubmission() {
                 onChange={handleChange}
                 placeholder="16 digit angka KTP"
                 required
-                className="w-full px-3 py-2 font-mono bg-[#f8f7f3]  border border-[#d9d5cb]  rounded-lg text-[#292524]  focus:outline-none focus:border-[#b32d32]"
+                className="w-full px-3 py-2 font-mono bg-slate-50 dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-red-600"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#44403c]  uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider mb-1">
                 Nama Lengkap Pemohon <span className="text-red-500">*</span>
               </label>
               <input
@@ -396,12 +359,12 @@ export default function WalkInSubmission() {
                 onChange={handleChange}
                 placeholder="Nama sesuai KTP"
                 required
-                className="w-full px-3 py-2 bg-[#f8f7f3]  border border-[#d9d5cb]  rounded-lg text-[#292524]  focus:outline-none focus:border-[#b32d32]"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-red-600"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#44403c]  uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider mb-1">
                 Nomor Kontak / WhatsApp
               </label>
               <input
@@ -410,12 +373,12 @@ export default function WalkInSubmission() {
                 value={formData.noHp}
                 onChange={handleChange}
                 placeholder="08123456789"
-                className="w-full px-3 py-2 bg-[#f8f7f3]  border border-[#d9d5cb]  rounded-lg text-[#292524]  focus:outline-none focus:border-[#b32d32]"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-red-600"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#44403c]  uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider mb-1">
                 Alamat Domisili KTP
               </label>
               <input
@@ -424,36 +387,36 @@ export default function WalkInSubmission() {
                 value={formData.alamat}
                 onChange={handleChange}
                 placeholder="Jl. / RT / RW / Kelurahan"
-                className="w-full px-3 py-2 bg-[#f8f7f3]  border border-[#d9d5cb]  rounded-lg text-[#292524]  focus:outline-none focus:border-[#b32d32]"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-red-600"
               />
             </div>
           </div>
         </div>
 
         {/* Section 2: Detail Permohonan Surat */}
-        <div className="p-6 border-b border-[#e7e4dc] ">
+        <div className="p-6 border-b border-slate-100 dark:border-neutral-800">
           <div className="flex items-center gap-2.5 mb-4">
-            <span className="w-6 h-6 rounded-full bg-[#fdf0ef] text-[#876a30]  font-bold text-xs flex items-center justify-center shrink-0">
+            <span className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-bold text-xs flex items-center justify-center shrink-0">
               2
             </span>
             <div>
-              <h3 className="text-sm font-semibold text-[#292524] ">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Detail Permohonan Surat
               </h3>
-              <p className="text-xs text-[#78716c]">Jenis surat dan maksud keperluan pembuatan</p>
+              <p className="text-[11px] text-slate-400">Jenis surat dan maksud keperluan pembuatan</p>
             </div>
           </div>
 
           <div className="space-y-4 text-xs">
             <div>
-              <label className="block text-xs font-semibold text-[#44403c]  uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider mb-1">
                 Pilih Jenis Surat <span className="text-red-500">*</span>
               </label>
               <select
                 name="jenisSurat"
                 value={formData.jenisSurat}
                 onChange={handleChange}
-                className="w-full px-3 py-2 bg-[#f8f7f3]  border border-[#d9d5cb]  rounded-lg text-[#292524]  font-medium focus:outline-none focus:border-[#b32d32] cursor-pointer"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-white font-medium focus:outline-none focus:border-red-600 cursor-pointer"
               >
                 <option value="">Pilih jenis surat</option>{SURAT_TYPES.map((type) => (
                   <option key={type} value={type}>
@@ -464,7 +427,7 @@ export default function WalkInSubmission() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#44403c]  uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider mb-1">
                 Maksud & Keperluan Pengajuan <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -474,7 +437,7 @@ export default function WalkInSubmission() {
                 onChange={handleChange}
                 placeholder="Contoh: Persyaratan pembukaan rekening bank, pengajuan pinjaman usaha, dsb..."
                 required
-                className="w-full p-2.5 bg-[#f8f7f3]  border border-[#d9d5cb]  rounded-lg text-[#292524]  focus:outline-none focus:border-[#b32d32]"
+                className="w-full p-2.5 bg-slate-50 dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-red-600"
               />
             </div>
           </div>
@@ -483,29 +446,29 @@ export default function WalkInSubmission() {
         {/* Section 3: Data Khusus Internal & Status Pelayanan */}
         <div className="p-6">
           <div className="flex items-center gap-2.5 mb-4">
-            <span className="w-6 h-6 rounded-full bg-[#fdf0ef] text-[#876a30]  font-bold text-xs flex items-center justify-center shrink-0">
+            <span className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-bold text-xs flex items-center justify-center shrink-0">
               3
             </span>
             <div>
-              <h3 className="text-sm font-semibold text-[#292524] ">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Internal Pelayanan Loket
               </h3>
-              <p className="text-xs text-[#78716c]">Pengaturan status penyelesaian dan nomor surat dinas</p>
+              <p className="text-[11px] text-slate-400">Pengaturan status penyelesaian dan nomor surat dinas</p>
             </div>
           </div>
 
           <div className="space-y-4 text-xs">
             {/* Status Awal */}
             <div>
-              <label className="block text-xs font-semibold text-[#44403c]  uppercase tracking-wider mb-2">
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider mb-2">
                 Status Pelayanan Loket <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label
                   className={`flex items-center gap-2.5 p-3 rounded-lg border cursor-pointer transition-all ${
                     formData.status === 'diproses'
-                      ? 'border-blue-500 bg-blue-50/50  text-blue-900  font-semibold'
-                      : 'border-[#e7e4dc]  hover:bg-[#f8f7f3]  text-[#57534e] '
+                      ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-900 dark:text-blue-300 font-semibold'
+                      : 'border-slate-200 dark:border-neutral-800 hover:bg-slate-50 dark:hover:bg-neutral-800/40 text-slate-600 dark:text-neutral-400'
                   }`}
                 >
                   <input
@@ -523,8 +486,8 @@ export default function WalkInSubmission() {
                 <label
                   className={`flex items-center gap-2.5 p-3 rounded-lg border cursor-pointer transition-all ${
                     formData.status === 'selesai'
-                      ? 'border-emerald-500 bg-emerald-50/50  text-emerald-900  font-semibold'
-                      : 'border-[#e7e4dc]  hover:bg-[#f8f7f3]  text-[#57534e] '
+                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300 font-semibold'
+                      : 'border-slate-200 dark:border-neutral-800 hover:bg-slate-50 dark:hover:bg-neutral-800/40 text-slate-600 dark:text-neutral-400'
                   }`}
                 >
                   <input
@@ -543,17 +506,17 @@ export default function WalkInSubmission() {
 
             {/* Nomor Surat & Pejabat (Jika Langsung Selesai) */}
             {formData.status === 'selesai' && (
-              <div className="p-4 bg-[#f8f7f3]  border border-[#e7e4dc] bg-white rounded-2xl space-y-3">
+              <div className="p-4 bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 rounded-xl space-y-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-[#44403c]  uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider">
                       Nomor Surat Resmi <span className="text-red-500">*</span>
                     </label>
                     <button
                       type="button"
                       onClick={handleAutoGenerateNumber}
                       disabled={generatingNumber}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#292524] hover:underline cursor-pointer"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 dark:text-red-400 hover:underline cursor-pointer"
                     >
                       <RefreshCw className={`w-3 h-3 ${generatingNumber ? 'animate-spin' : ''}`} />
                       <span>{generatingNumber ? 'Menghasilkan...' : 'Generate Nomor'}</span>
@@ -565,14 +528,14 @@ export default function WalkInSubmission() {
                     value={formData.nomorSurat}
                     onChange={handleChange}
                     placeholder="Contoh: 470 / 001 / KEL.CKR / XI / 2026"
-                    className={`w-full px-3 py-2 font-mono bg-white  border rounded-2xl text-[#292524]  focus:outline-none ${
+                    className={`w-full px-3 py-2 font-mono bg-white dark:bg-neutral-900 border rounded-lg text-slate-900 dark:text-white focus:outline-none ${
                       isDuplicateNumber
                         ? 'border-red-500 ring-1 ring-red-500'
-                        : 'border-[#d9d5cb]  focus:border-[#b32d32]'
+                        : 'border-slate-300 dark:border-neutral-700 focus:border-red-600'
                     }`}
                   />
                   {isDuplicateNumber && (
-                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" />
                       Nomor surat sudah terdaftar. Silakan buat nomor urut baru.
                     </p>
@@ -580,16 +543,16 @@ export default function WalkInSubmission() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#44403c]  uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider mb-1">
                     Pejabat Penanda Tangan (TTD) <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="pejabatTTD"
                     value={formData.pejabatTTD}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-white  border border-[#d9d5cb]  rounded-2xl text-[#292524]  font-medium focus:outline-none focus:border-[#b32d32] cursor-pointer"
+                    className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-white font-medium focus:outline-none focus:border-red-600 cursor-pointer"
                   >
-                    {officials.map((o) => (
+                    {OFFICIALS.map((o) => (
                       <option key={o.nip} value={o.name}>
                         {o.name} &mdash; {o.role} (NIP. {o.nip})
                       </option>
@@ -601,7 +564,7 @@ export default function WalkInSubmission() {
 
             {/* Catatan Petugas */}
             <div>
-              <label className="block text-xs font-semibold text-[#44403c]  uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 uppercase tracking-wider mb-1">
                 Catatan Loket (Opsional)
               </label>
               <textarea
@@ -610,24 +573,24 @@ export default function WalkInSubmission() {
                 value={formData.catatanPetugas}
                 onChange={handleChange}
                 placeholder="Catatan tambahan pelayanan loket tatap muka..."
-                className="w-full p-2.5 bg-[#f8f7f3]  border border-[#d9d5cb]  rounded-lg text-[#292524]  focus:outline-none focus:border-[#b32d32]"
+                className="w-full p-2.5 bg-slate-50 dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-red-600"
               />
             </div>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 bg-[#f8f7f3]/70  border-t border-[#e7e4dc]  flex items-center justify-end gap-3">
+        <div className="p-6 bg-slate-50/70 dark:bg-neutral-950 border-t border-slate-200 dark:border-neutral-800 flex items-center justify-end gap-3">
           <Link
             to="/admin/submissions"
-            className="px-4 py-2 bg-white  hover:bg-[#f8f7f3]  border border-[#d9d5cb]  text-[#44403c]  rounded-2xl text-xs font-semibold transition-colors"
+            className="px-4 py-2 bg-white dark:bg-neutral-800 hover:bg-slate-50 dark:hover:bg-neutral-700 border border-slate-300 dark:border-neutral-700 text-slate-700 dark:text-neutral-300 rounded-lg text-xs font-semibold transition-colors"
           >
             Batal
           </Link>
           <button
             type="submit"
-            disabled={loading || (formData.status === 'selesai' && (officialsLoading || !!officialsError || !officials.length)) || typesLoading || !!typesError || !letterTypes.length || (formData.status === 'selesai' && isDuplicateNumber)}
-            className="px-5 py-2 bg-[#b32d32] hover:bg-[#92252a] text-white rounded-lg text-xs font-semibold shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            disabled={loading || (formData.status === 'selesai' && isDuplicateNumber)}
+            className="px-5 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {loading ? <Spinner size="xs" color="white" /> : <Send className="w-3.5 h-3.5" />}
             <span>Simpan Permohonan</span>

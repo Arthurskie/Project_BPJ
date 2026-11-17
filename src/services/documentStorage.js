@@ -1,29 +1,45 @@
-import * as demo from './demo/documentStorage';
-import { isDemoMode, getSupabase, guestAction } from './supabaseClient';
-const allowed = ['application/pdf', 'image/jpeg', 'image/png'];
+const openDB = () => new Promise((resolve, reject) => {
+  const request = indexedDB.open('bpj_documents', 1);
+  request.onupgradeneeded = () => request.result.createObjectStore('files');
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(new Error('Penyimpanan dokumen tidak tersedia.'));
+});
+
 export async function storeDocument(file) {
-  if (isDemoMode) return demo.storeDocument(file);
-  if (!allowed.includes(file.type) || file.size <= 0 || file.size > 10 * 1024 * 1024) throw new Error('Lampiran harus PDF, JPG, atau PNG maksimal 10 MB.');
-  const { data } = await guestAction('upload', { content_type: file.type, size: file.size, name: file.name || 'lampiran' });
+  if (file.size > 10 * 1024 * 1024) throw new Error('Ukuran berkas maksimal 10 MB.');
+  const db = await openDB();
+  const storageId = crypto.randomUUID();
   try {
-    const { error } = await getSupabase().storage.from('bpj-documents').uploadToSignedUrl(data.path, data.upload_token, file, { contentType: file.type });
-    if (error) throw new Error('Unggah lampiran gagal.');
-  } catch (error) {
-    try { await guestAction('remove', { token: data.token }); }
-    catch { throw new Error('Unggah gagal dan pembersihan belum berhasil; hubungi pengelola.'); }
-    throw error;
-  }
-  return { token: data.token, path: data.path, name: file.name || 'lampiran', size: file.size, type: file.type };
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readwrite');
+      tx.objectStore('files').put(file, storageId);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(new Error('Dokumen gagal disimpan. Periksa kapasitas penyimpanan browser.'));
+      tx.onabort = tx.onerror;
+    });
+    return { storageId, name: file.name, size: file.size, type: file.type };
+  } finally { db.close(); }
 }
-export async function readDocument(path) {
-  if (isDemoMode) return demo.readDocument(path);
-  const { data, error } = await getSupabase().storage.from('bpj-documents').createSignedUrl(path, 60);
-  if (error) throw new Error('Akses lampiran ditolak atau berkas tidak tersedia.');
-  const response = await fetch(data.signedUrl);
-  if (!response.ok) throw new Error('Lampiran gagal dimuat.');
-  return response.blob();
+
+export async function readDocument(storageId) {
+  const db = await openDB();
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction('files').objectStore('files').get(storageId);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(new Error('Dokumen gagal dibaca.'));
+    });
+  } finally { db.close(); }
 }
-export async function removeDocuments(tokens) {
-  if (isDemoMode) return demo.removeDocuments(tokens);
-  await Promise.all(tokens.map(token => guestAction('remove', { token })));
+
+export async function removeDocuments(ids) {
+ if (!ids.length) return;
+ const db = await openDB();
+ try { await new Promise((resolve,reject) => {
+  const tx = db.transaction('files','readwrite');
+  ids.forEach(id => tx.objectStore('files').delete(id));
+  tx.oncomplete = resolve;
+  tx.onerror = () => reject(new Error('Pembersihan dokumen gagal.'));
+  tx.onabort = tx.onerror;
+ }); } finally { db.close(); }
 }

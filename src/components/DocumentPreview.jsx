@@ -14,7 +14,7 @@ export default function DocumentPreview({ file, onClose }) {
     async function load() {
       try {
         let blob;
-        if (file.storageId || file.path) blob = await readDocument(file.storageId || file.path);
+        if (file.storageId) blob = await readDocument(file.storageId);
         else if (file.url || file.path) {
           const url = new URL(file.url || file.path, window.location.origin);
           if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Alamat dokumen tidak didukung.');
@@ -49,6 +49,4 @@ export default function DocumentPreview({ file, onClose }) {
     </dialog>
   );
 }
-
-
 

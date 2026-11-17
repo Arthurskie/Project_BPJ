@@ -1,4 +1,0 @@
-project_id = "benbawoavrvipdyuzffw"
-
-[functions.bpj-guest]
-verify_jwt = false
