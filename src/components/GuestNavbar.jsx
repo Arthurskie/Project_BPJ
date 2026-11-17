@@ -17,13 +17,11 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
 
   // Sinkronisasi status navbar saat terjadi navigasi smooth glide
   useEffect(() => {
-    const onNavGliding = () => {
+    const onNavGliding = (event) => {
+      isProgrammaticScroll.current = event.detail?.active !== false;
       setNavVisible(true);
-      isProgrammaticScroll.current = true;
-      setTimeout(() => {
-        isProgrammaticScroll.current = false;
-        lastScrollY.current = window.scrollY;
-      }, 900);
+      setScrolled(window.scrollY > 20);
+      lastScrollY.current = window.scrollY;
     };
 
     window.addEventListener('nav-gliding', onNavGliding);
@@ -89,11 +87,6 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
       e?.preventDefault();
       setMobileOpen(false);
       setNavVisible(true);
-      isProgrammaticScroll.current = true;
-      setTimeout(() => {
-        isProgrammaticScroll.current = false;
-        lastScrollY.current = window.scrollY;
-      }, 900);
       onScrollToSection(e, id);
     }
   };
@@ -104,11 +97,6 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
       e.preventDefault();
       setMobileOpen(false);
       setNavVisible(true);
-      isProgrammaticScroll.current = true;
-      setTimeout(() => {
-        isProgrammaticScroll.current = false;
-        lastScrollY.current = window.scrollY;
-      }, 900);
       if (onScrollToSection) {
         onScrollToSection(e, 'beranda');
       }
@@ -124,6 +112,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
 
   return (
     <header
+      data-guest-navbar
       className={`sticky top-0 z-50 w-full transition-transform duration-300 ease-in-out border-b border-slate-200 dark:border-neutral-800 ${
         (navVisible || mobileOpen) ? 'translate-y-0' : '-translate-y-full'
       } ${
@@ -172,6 +161,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                     href="/guest"
                     onClick={(e) => handleNav(e, item.id)}
                     className={linkClass}
+                    aria-current={isActive ? 'location' : undefined}
                   >
                     {item.label}
                     {isActive && (
@@ -184,6 +174,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                     to="/guest"
                       state={{ section: item.id }}
                     className={linkClass}
+                    aria-current={isActive ? 'location' : undefined}
                   >
                     {item.label}
                   </Link>
@@ -264,6 +255,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                       href="/guest"
                       onClick={(e) => handleNav(e, item.id)}
                       className={mobileLinkClass}
+                    aria-current={isActive ? 'location' : undefined}
                     >
                       <span>{item.label}</span>
                       {isActive && (
@@ -277,6 +269,7 @@ export default function GuestNavbar({ activeSection, onScrollToSection }) {
                       state={{ section: item.id }}
                       onClick={() => setMobileOpen(false)}
                       className={mobileLinkClass}
+                    aria-current={isActive ? 'location' : undefined}
                     >
                       <span>{item.label}</span>
                     </Link>

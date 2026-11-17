@@ -1,16 +1,16 @@
 import {
   Box3, BoxGeometry, CircleGeometry, CylinderGeometry, DirectionalLight,
   ExtrudeGeometry, Group, HemisphereLight, MathUtils, Mesh,
-  MeshStandardMaterial, PCFSoftShadowMap, PerspectiveCamera, Scene,
+  MeshStandardMaterial, PCFShadowMap, PerspectiveCamera, Scene,
   ShadowMaterial, Shape, SRGBColorSpace, WebGLRenderer,
 } from 'three';
 import { fitCivicCamera } from './sceneFraming.js';
 
-export function mountCivicScene(host, onLost) {
+export function mountCivicScene(host, onLost, onReady) {
   const renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PCFSoftShadowMap;
+  renderer.shadowMap.type = PCFShadowMap;
   renderer.outputColorSpace = SRGBColorSpace;
   host.appendChild(renderer.domElement);
   const scene = new Scene();
@@ -63,8 +63,8 @@ export function mountCivicScene(host, onLost) {
   const floor = new Mesh(new CircleGeometry(5, 64), new ShadowMaterial({ opacity: .12 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -.16; floor.receiveShadow = true; scene.add(floor);
   let frame = 0, last = 0, visible = true, disposed = false, dirty = true;
-  let targetX = 0, targetY = 0;
-  const resize = () => { const { width, height } = host.getBoundingClientRect(); if (!width || !height) return; renderer.setSize(width, height, false);
+  let targetX = 0, targetY = 0, rendered = false, sized = false;
+  const resize = () => { const { width, height } = host.getBoundingClientRect(); if (!width || !height) return; renderer.setSize(width, height, false); sized = true;
     const bounds = new Box3().setFromObject(group).expandByScalar(.3);
     fitCivicCamera(camera, bounds, width / height); dirty = true; resume(); };
   const observer = new ResizeObserver(resize); observer.observe(host);
@@ -77,7 +77,12 @@ export function mountCivicScene(host, onLost) {
     last = time;
     group.rotation.y += (targetY - group.rotation.y) * .08;
     group.rotation.x += (targetX - group.rotation.x) * .08;
-    if (dirty) renderer.render(scene, camera);
+    if (dirty && sized) {
+      try {
+        renderer.render(scene, camera);
+        if (!rendered) { rendered = true; onReady?.(); }
+      } catch { onLost(); return; }
+    }
     dirty = Math.abs(targetY - group.rotation.y) > .0001 || Math.abs(targetX - group.rotation.x) > .0001;
     if (dirty) frame = requestAnimationFrame(draw);
   };

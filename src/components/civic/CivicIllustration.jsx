@@ -1,46 +1,45 @@
 import { useEffect, useRef, useState } from 'react';
 import { canAnimateCivicScene } from './scenePolicy';
+import { startCivicScene } from './sceneLoading';
+
+function shouldAnimate() {
+  return typeof window !== 'undefined' && canAnimateCivicScene({ width: window.innerWidth, reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches, saveData: navigator.connection?.saveData, cores: navigator.hardwareConcurrency, memory: navigator.deviceMemory });
+}
 
 export default function CivicIllustration() {
   const host = useRef(null);
-  const [ready, setReady] = useState(false);
+  const [status, setStatus] = useState(() => shouldAnimate() ? 'loading' : 'static');
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const desktop = window.matchMedia('(min-width: 960px)');
-    let cancelled = false;
+    const connection = navigator.connection;
     let dispose;
-    let timer;
-    let generation = 0;
     const update = () => {
-      const current = ++generation;
-      clearTimeout(timer);
       dispose?.();
       dispose = undefined;
-      setReady(false);
-      if (!canAnimateCivicScene({ width: window.innerWidth, reducedMotion: media.matches, saveData: navigator.connection?.saveData, cores: navigator.hardwareConcurrency, memory: navigator.deviceMemory })) return;
-      timer = window.setTimeout(async () => {
-        try {
-          const { mountCivicScene } = await import('./civicScene');
-          if (cancelled || current !== generation) return;
-          dispose = mountCivicScene(host.current, () => setReady(false));
-          setReady(true);
-        } catch { if (!cancelled && current === generation) setReady(false); }
-      }, 250);
+      if (!shouldAnimate()) { setStatus('static'); return; }
+      setStatus('loading');
+      dispose = startCivicScene({
+        host: host.current,
+        load: () => import('./civicScene'),
+        onReady: () => setStatus('ready'),
+        onFallback: () => setStatus('static'),
+      });
     };
-    // The first frame is always the lightweight illustration, never a loading placeholder.
-    timer = window.setTimeout(update, 0);
+    update();
     media.addEventListener('change', update);
     desktop.addEventListener('change', update);
-    navigator.connection?.addEventListener('change', update);
+    connection?.addEventListener('change', update);
     return () => {
-      cancelled = true; generation++; clearTimeout(timer); dispose?.();
+      dispose?.();
       media.removeEventListener('change', update);
       desktop.removeEventListener('change', update);
-      navigator.connection?.removeEventListener('change', update);
+      connection?.removeEventListener('change', update);
     };
   }, []);
-  return <div className="civic-art" aria-hidden="true">
-    <div className={`civic-static ${ready ? 'is-hidden' : ''}`}>
+  return <div className="civic-art">
+    {status === 'loading' && <div className="civic-loading" role="status"><span className="civic-loading-indicator" aria-hidden="true" /><span>Memuat ilustrasi…</span></div>}
+    <div className={`civic-static ${status !== 'static' ? 'is-hidden' : ''}`} aria-hidden="true">
       <svg viewBox="0 0 600 460" focusable="false">
         <g className="static-building">
         <ellipse cx="300" cy="381" rx="229" ry="33" fill="#e7e1d8" />
@@ -56,7 +55,7 @@ export default function CivicIllustration() {
         </g>
       </svg>
     </div>
-    <div className={`civic-canvas ${ready ? 'is-ready' : ''}`} ref={host} />
-    <span className="civic-caption">Administrasi tertata. Pelayanan lebih dekat.</span>
+    <div className={`civic-canvas ${status === 'ready' ? 'is-ready' : ''}`} ref={host} aria-hidden="true" />
+    <span className="civic-caption" aria-hidden="true">Administrasi tertata. Pelayanan lebih dekat.</span>
   </div>;
 }
