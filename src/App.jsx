@@ -18,6 +18,7 @@ const AuthLayout = lazy(() => import('./layouts/AuthLayout'));
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
 
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -52,6 +53,7 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                 </Route>
 
                 {/* Protected Admin Routes (Wajib Login & RBAC) */}
@@ -60,6 +62,7 @@ function App() {
                     <Route index element={<Dashboard />} />
                     <Route path="forms" element={<Forms />} />
                     <Route path="forms/new" element={<CreateForm />} />
+                    <Route path="forms/:id/edit" element={<CreateForm />} />
                     <Route path="activity" element={<Activity />} />
                     <Route path="settings" element={<Settings />} />
                     <Route path="profile" element={<Profile />} />

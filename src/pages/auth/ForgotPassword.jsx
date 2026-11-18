@@ -19,7 +19,7 @@ export default function ForgotPassword() {
     setSuccessMsg('');
 
     if (!email.trim()) {
-      setErrorMsg('Mohon masukkan email kedinasan atau NIP Anda.');
+      setErrorMsg('Mohon masukkan email kedinasan Anda.');
       return;
     }
 
@@ -41,7 +41,7 @@ export default function ForgotPassword() {
         });
       }, 1000);
     } catch (err) {
-      setErrorMsg(err.message || 'Email atau NIP tidak ditemukan dalam database kepegawaian.');
+      setErrorMsg(err.message || 'Permintaan belum dapat diproses. Silakan coba kembali.');
     } finally {
       setLoading(false);
     }
@@ -60,7 +60,7 @@ export default function ForgotPassword() {
             Lupa Kata Sandi
           </h2>
           <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1 leading-relaxed">
-            Masukkan NIP atau email kedinasan terdaftar untuk menerima instruksi pengaturan ulang kata sandi.
+            Masukkan email kedinasan terdaftar untuk menerima instruksi pengaturan ulang kata sandi.
           </p>
         </div>
 
@@ -78,13 +78,13 @@ export default function ForgotPassword() {
             <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-lg flex items-start gap-3 text-emerald-800 dark:text-emerald-300 text-xs">
               <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
               <div>
-                <p className="font-semibold text-slate-900 dark:text-white">Tautan Berhasil Dikirim</p>
+                <p className="font-semibold text-slate-900 dark:text-white">Permintaan Diterima</p>
                 <p className="mt-1 leading-relaxed text-slate-600 dark:text-neutral-300">{successMsg}</p>
               </div>
             </div>
 
             <p className="text-xs text-slate-500 dark:text-neutral-400 leading-relaxed">
-              Silakan periksa kotak masuk atau folder spam email kedinasan Anda. Tautan pemulihan berlaku selama 30 menit.
+              Silakan periksa kotak masuk atau folder spam email kedinasan Anda. Gunakan tautan terbaru sebelum masa berlakunya berakhir.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
@@ -112,14 +112,14 @@ export default function ForgotPassword() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
-                NIP atau Email Kedinasan
+                email Kedinasan
               </label>
               <input
-                type="text"
+                type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Contoh: 19850315... atau nama@kelurahan.go.id"
+                placeholder="Contoh: nama@kelurahan.go.id"
                 className="w-full px-3.5 py-2.5 bg-white dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-colors"
               />
             </div>

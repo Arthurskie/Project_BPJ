@@ -1,107 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React,{useState,useEffect,useCallback,useRef} from 'react';
 import authAPI from '../services/authAPI';
-
-import { AuthContext } from './useAuth.js';
-
-
-
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Periksa sesi aktif pada saat aplikasi pertama kali dimuat
-  useEffect(() => {
-    let isMounted = true;
-
-    async function checkAuth() {
-      try {
-        const response = await authAPI.getMe();
-        if (isMounted && response?.success && response?.user) {
-          setUser(response.user);
-        }
-      } catch {
-        if (isMounted) {
-          setUser(null);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    checkAuth();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const login = async (email, password) => {
-    setError(null);
-    try {
-      const response = await authAPI.login(email, password);
-      if (response.success && response.user) {
-        setUser(response.user);
-        return { success: true, user: response.user };
-      }
-      throw new Error(response.message || 'Login gagal.');
-    } catch (err) {
-      const msg = err.message || 'Terjadi kesalahan saat login.';
-      setError(msg);
-      throw err;
-    }
-  };
-
-  const register = async (userData) => {
-    setError(null);
-    try {
-      const response = await authAPI.register(userData);
-      return response;
-    } catch (err) {
-      const msg = err.message || 'Terjadi kesalahan saat registrasi.';
-      setError(msg);
-      throw err;
-    }
-  };
-
-  const forgotPassword = async (email) => {
-    setError(null);
-    try {
-      const response = await authAPI.forgotPassword(email);
-      return response;
-    } catch (err) {
-      const msg = err.message || 'Terjadi kesalahan saat memproses permintaan.';
-      setError(msg);
-      throw err;
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await authAPI.logout();
-    } catch (err) {
-      console.error('[Logout Error]:', err);
-    } finally {
-      setUser(null);
-    }
-  };
-
-  const value = {
-    user,
-    loading,
-    error,
-    login,
-    register,
-    forgotPassword,
-    logout,
-    isAuthenticated: !!user,
-    isSuperAdmin: user?.role === 'super_admin',
-    isVerifikator: user?.role === 'verifikator' || user?.role === 'super_admin'
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+import {supabaseConfigured} from '../lib/supabase.js';
+import {AuthContext} from './useAuth.js';
+import {createRequestGate} from '../services/requestGate.js';
+export function AuthProvider({children}){
+ const [user,setUser]=useState(null),[loading,setLoading]=useState(supabaseConfigured),[error,setError]=useState(null);
+ const [gate]=useState(createRequestGate);const mounted=useRef(true);
+ const refresh=useCallback(async()=>{
+  const request=gate.next();setLoading(true);
+  try{const response=await authAPI.getMe();if(mounted.current&&gate.isCurrent(request))setUser(response.user);return response.user;}
+  catch{if(mounted.current&&gate.isCurrent(request))setUser(null);return null;}
+  finally{if(mounted.current&&gate.isCurrent(request))setLoading(false);}
+ },[gate]);
+ useEffect(()=>{
+  mounted.current=true;
+  if(!supabaseConfigured)return;
+  queueMicrotask(()=>{if(mounted.current)refresh();});
+  const {data:{subscription}}=authAPI.onAuthStateChange((event)=>{
+   gate.next();
+   if(event==='SIGNED_OUT'){setUser(null);setLoading(false);return;}
+   setUser(null);setLoading(true);
+   queueMicrotask(()=>{if(mounted.current)refresh();});
+  });
+  return()=>{mounted.current=false;gate.next();subscription.unsubscribe();};
+ },[refresh,gate]);
+ const login=async(email,password)=>{
+  setError(null);const request=gate.next();
+  try{const result=await authAPI.login(email,password);if(mounted.current&&gate.isCurrent(request))setUser(result.user);return result;}
+  catch(err){if(mounted.current&&gate.isCurrent(request)){setUser(null);setError(err.message);}throw err;}
+ };
+ const logout=async()=>{gate.next();setUser(null);setLoading(true);try{await authAPI.logout();}finally{if(mounted.current)setLoading(false);}};
+ const value={user,loading,error,login,logout,refresh,forgotPassword:authAPI.forgotPassword,isAuthenticated:user?.role==='admin'&&user?.is_active===true,isSuperAdmin:user?.role==='admin',isVerifikator:user?.role==='admin'};
+ return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-

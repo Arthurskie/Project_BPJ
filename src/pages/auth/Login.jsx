@@ -11,7 +11,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -32,7 +32,7 @@ export default function Login() {
     setErrorMsg('');
 
     if (!email.trim() || !password) {
-      setErrorMsg('Mohon lengkapi NIP/email dan kata sandi Anda.');
+      setErrorMsg('Mohon lengkapi email dan kata sandi Anda.');
       return;
     }
 
@@ -48,11 +48,7 @@ export default function Login() {
     }
   };
 
-  const fillCredential = (demoEmail, demoPass) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setErrorMsg('');
-  };
+
 
   return (
     <div className="max-w-md mx-auto">
@@ -67,7 +63,7 @@ export default function Login() {
             Masuk ke Sistem
           </h2>
           <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1 leading-relaxed">
-            Gunakan NIP atau email kedinasan terdaftar untuk mengelola permohonan surat warga.
+            Gunakan email kedinasan terdaftar untuk mengelola permohonan surat warga.
           </p>
         </div>
 
@@ -83,14 +79,14 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
-              NIP atau Email Kedinasan
+              email Kedinasan
             </label>
             <input
-              type="text"
+              type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Contoh: 19850315... atau nama@kelurahan.go.id"
+              placeholder="Contoh: nama@kelurahan.go.id"
               className="w-full px-3.5 py-2.5 bg-white dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-colors"
             />
           </div>
@@ -120,24 +116,14 @@ export default function Login() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-neutral-200"
-                tabIndex={-1}
+                aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          <div className="flex items-center pt-1">
-            <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-600 dark:text-neutral-400">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-red-700 focus:ring-red-600 dark:border-neutral-700 dark:bg-neutral-800"
-              />
-              <span>Ingat saya di perangkat ini</span>
-            </label>
-          </div>
+
 
           <button
             type="submit"
@@ -158,39 +144,7 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Footer Navigasi Form */}
-        <div className="mt-6 pt-5 border-t border-slate-200 dark:border-neutral-800 text-center text-xs text-slate-600 dark:text-neutral-400">
-          Belum memiliki akun petugas?{' '}
-          <Link
-            to="/register"
-            className="font-semibold text-red-700 dark:text-red-400 hover:underline"
-          >
-            Daftar Petugas Baru
-          </Link>
-        </div>
-
-        {/* Bantuan Pengujian Cepat (Minimalist & Discreet) */}
-        <div className="mt-4 pt-3 border-t border-dashed border-slate-200 dark:border-neutral-800 text-[11px] text-slate-500 dark:text-neutral-500 flex items-center justify-between">
-          <span>Akun Uji Coba:</span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => fillCredential('admin@kelurahan.go.id', 'password123')}
-              className="text-slate-600 dark:text-neutral-400 hover:text-red-700 dark:hover:text-red-400 font-medium underline"
-            >
-              Admin
-            </button>
-            <span>•</span>
-            <button
-              type="button"
-              onClick={() => fillCredential('verifikator@kelurahan.go.id', 'password123')}
-              className="text-slate-600 dark:text-neutral-400 hover:text-red-700 dark:hover:text-red-400 font-medium underline"
-            >
-              Verifikator
-            </button>
-          </div>
-        </div>
-
+        <p className="mt-6 text-xs text-slate-500">Akun petugas hanya tersedia melalui undangan administrator.</p>
       </div>
     </div>
   );

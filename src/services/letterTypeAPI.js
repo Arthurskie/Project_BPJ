@@ -1,29 +1,13 @@
-const KEY = 'bpj_letter_types_v1';
-const names = ['Surat Keterangan Usaha (SKU)', 'Surat Keterangan Domisili', 'Surat Keterangan Tidak Mampu (SKTM)', 'Surat Keterangan Belum Menikah', 'Surat Pengantar SKCK', 'Surat Keterangan Kematian', 'Surat Keterangan Kelahiran', 'Surat Keterangan Penghasilan', 'Surat Rekomendasi Izin Keramaian'];
-const defaults = names.map((name, index) => ({ id: `type-${index + 1}`, code: ['SKU','DOM','SKTM','BM','SKCK','MATI','LAHIR','HASIL','RAMAI'][index], name, requirements: ['Fotokopi KTP', 'Fotokopi Kartu Keluarga', ['Keterangan usaha dan alamat usaha', 'Bukti alamat domisili', 'Keterangan kondisi ekonomi', 'Pernyataan status perkawinan', 'Pengantar RT/RW untuk SKCK', 'Keterangan kematian dari fasilitas kesehatan', 'Keterangan kelahiran dari fasilitas kesehatan', 'Rincian penghasilan pemohon', 'Rincian acara, lokasi, dan waktu'][index]], active: true }));
-function getAll() {
-  const stored = localStorage.getItem(KEY);
-  if (!stored) return defaults.map(item => ({ ...item, requirements: [...item.requirements] }));
-  try { const data = JSON.parse(stored); if (!Array.isArray(data)) throw new Error(); return data; }
-  catch { throw new Error('Data jenis surat tidak dapat dibaca. Hubungi administrator.'); }
-}
-function persist(items) {
-  localStorage.setItem(KEY, JSON.stringify(items));
-  window.dispatchEvent(new Event('letter-types-updated'));
-}
-function save(input) {
-  const items = getAll();
-  const code = input.code.trim().toUpperCase();
-  const name = input.name.trim();
-  if (!/^[A-Z0-9_-]{2,20}$/.test(code)) throw new Error('Kode wajib 2–20 karakter huruf, angka, garis bawah, atau tanda hubung.');
-  if (!name || name.length > 150) throw new Error('Nama jenis surat wajib diisi (maksimal 150 karakter).');
-  if (items.some(item => item.id !== input.id && (item.code.toUpperCase() === code || item.name.toLowerCase() === name.toLowerCase()))) throw new Error('Kode atau nama jenis surat sudah digunakan.');
-  const requirements = [...new Set(input.requirements.map(value => value.trim()).filter(Boolean))];
-  if (!requirements.length) throw new Error('Isi minimal satu persyaratan.');
-  const record = { id: input.id || crypto.randomUUID(), code, name, requirements, active: Boolean(input.active) };
-  persist(input.id ? items.map(item => item.id === input.id ? record : item) : [...items, record]);
-  return record;
-}
-function remove(id) { persist(getAll().filter(item => item.id !== id)); }
-export default { getAll, save, remove, getActive: () => getAll().filter(item => item.active) };
-
+import {getSupabase} from '../lib/supabase.js';
+import {unwrap} from './adapterUtils.js';
+import {saveTypeWithFields} from './masterAdapter.js';
+const mapField=f=>({...f,key:f.field_key,type:f.tipe_input,required:f.wajib,options:f.opsi});
+const mapType=r=>({...r,name:r.nama,code:r.kode,active:r.is_active,fields:(r.form_surat_fields||r.fields||[]).sort((a,b)=>a.urutan-b.urutan).map(mapField)});
+async function list(active){let q=getSupabase().from('jenis_surat').select('*,form_surat_fields(*)').order('nama');if(active)q=q.eq('is_active',true);return (await unwrap(q)).map(mapType);}
+const letterTypeAPI={getAll:()=>list(false),getActive:()=>list(true),
+ async save(input){if(Array.isArray(input.fields)){const id=await saveTypeWithFields(getSupabase(),input);return mapType(await unwrap(getSupabase().from('jenis_surat').select('*,form_surat_fields(*)').eq('id',id).single()));}const row={kode:(input.kode??input.code).trim().toUpperCase(),nama:(input.nama??input.name).trim(),deskripsi:input.deskripsi||null,is_active:input.is_active??input.active??false};let q=getSupabase().from('jenis_surat');q=input.id?q.update(row).eq('id',input.id):q.insert(row);return mapType(await unwrap(q.select().single()));},
+ async remove(id){await unwrap(getSupabase().from('jenis_surat').delete().eq('id',id));},
+ async saveField(typeId,input){const row={jenis_surat_id:typeId,field_key:input.field_key??input.key,label:input.label,tipe_input:input.tipe_input??input.type,placeholder:input.placeholder||null,wajib:input.wajib??input.required??false,opsi:input.opsi??input.options??[],panjang_maksimum:input.panjang_maksimum??255,urutan:input.urutan??0};let q=getSupabase().from('form_surat_fields');q=input.id?q.update(row).eq('id',input.id).eq('jenis_surat_id',typeId):q.insert(row);return mapField(await unwrap(q.select().single()));},
+ async removeField(id){await unwrap(getSupabase().from('form_surat_fields').delete().eq('id',id));}
+};
+export default letterTypeAPI;

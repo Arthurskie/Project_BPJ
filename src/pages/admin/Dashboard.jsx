@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Clock, RefreshCw, CheckCircle2, XCircle, Plus, ArrowRight, Inbox, Calendar } from 'lucide-react';
 import dashboardAPI from '../../services/dashboardAPI';
@@ -7,8 +7,9 @@ import { useAuth } from '../../contexts/useAuth';
 import { Skeleton } from '../../components/Loading';
 
 const statusMeta = {
-  pending: { label: 'Menunggu', icon: Clock, style: 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300' },
+  menunggu: { label: 'Menunggu', icon: Clock, style: 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300' },
   diproses: { label: 'Diproses', icon: RefreshCw, style: 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300' },
+  disetujui: { label: 'Disetujui', icon: CheckCircle2, style: 'bg-blue-50 text-blue-800' },
   selesai: { label: 'Selesai', icon: CheckCircle2, style: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' },
   ditolak: { label: 'Ditolak', icon: XCircle, style: 'bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-300' }
 };
@@ -56,9 +57,9 @@ export default function Dashboard() {
 
   const statCards = [
     { title: 'Total permohonan', value: stats?.totalSubmissions, icon: Inbox },
-    { title: 'Menunggu verifikasi', value: stats?.pendingSubmissions, icon: Clock },
-    { title: 'Sedang diproses', value: stats?.processingSubmissions, icon: RefreshCw },
-    { title: 'Surat selesai', value: stats?.completedSubmissions, icon: CheckCircle2 }
+    { title: 'Menunggu verifikasi', value: stats?.menunggu, icon: Clock },
+    { title: 'Sedang diproses', value: stats?.diproses, icon: RefreshCw },
+    { title: 'Surat selesai', value: stats?.selesai, icon: CheckCircle2 }
   ];
   const currentDateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const panel = 'rounded-xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-900';
@@ -97,9 +98,9 @@ export default function Dashboard() {
             <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
               {recentSubmissions.map(item => <tr key={item.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-neutral-800/40">
                 <td className="px-5 py-4"><Link to={`/admin/submissions/${item.id}`} className="whitespace-nowrap font-mono text-xs font-medium text-slate-800 hover:text-red-700 hover:underline dark:text-neutral-200">{item.trackingCode}</Link></td>
-                <td className="px-5 py-4"><p className="font-medium text-slate-900 dark:text-white">{item.nama}</p><p className="mt-1 text-xs tabular-nums text-slate-500 dark:text-neutral-400">{item.nik}</p></td>
+                <td className="px-5 py-4"><p className="font-medium text-slate-900 dark:text-white">{item.nama}</p><p className="mt-1 text-xs tabular-nums text-slate-500 dark:text-neutral-400">{item.no_hp}</p></td>
                 <td className="px-5 py-4">{item.jenisSurat}</td>
-                <td className="whitespace-nowrap px-5 py-4 text-slate-500 dark:text-neutral-400">{item.source === 'walk-in' ? 'Loket / walk-in' : 'Portal online'}</td>
+                <td className="whitespace-nowrap px-5 py-4 text-slate-500 dark:text-neutral-400">{item.source === 'loket' ? 'Loket / walk-in' : 'Portal online'}</td>
                 <td className="px-5 py-4"><StatusBadge status={item.status} /></td>
                 <td className="px-5 py-4 text-right"><button type="button" onClick={() => navigate(`/admin/submissions/${item.id}`)} className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-slate-400 hover:bg-white dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800" aria-label={`Verifikasi permohonan ${item.trackingCode}`}>Verifikasi</button></td>
               </tr>)}
@@ -109,7 +110,7 @@ export default function Dashboard() {
       </section>
 
       <section className={panel} aria-labelledby="activity-title">
-        <div className="border-b border-slate-200 px-5 py-4 dark:border-neutral-800"><h2 id="activity-title" className="text-base font-semibold text-slate-950 dark:text-white">Aktivitas terbaru</h2><p className="mt-1 text-slate-500 dark:text-neutral-400">Tindakan petugas dari catatan audit lokal.</p></div>
+        <div className="border-b border-slate-200 px-5 py-4 dark:border-neutral-800"><h2 id="activity-title" className="text-base font-semibold text-slate-950 dark:text-white">Aktivitas terbaru</h2><p className="mt-1 text-slate-500 dark:text-neutral-400">Tindakan petugas dari catatan audit database.</p></div>
         {loading ? <div className="p-5"><Skeleton variant="text" count={3} /></div> : activities.length === 0 ? <p className="px-5 py-8 text-slate-500 dark:text-neutral-400">Belum ada aktivitas untuk ditampilkan.</p> : <ul className="divide-y divide-slate-100 dark:divide-neutral-800">{activities.map(activity => <li key={activity.id} className="flex items-start gap-3 px-5 py-4"><span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-neutral-800 dark:text-neutral-400"><Clock size={14} /></span><div className="min-w-0 flex-1"><p className="font-medium text-slate-800 dark:text-neutral-200">{activity.title}</p><p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">{activity.description}</p></div><span className="shrink-0 pt-1 text-xs tabular-nums text-slate-500 dark:text-neutral-400">{activity.time}</span></li>)}</ul>}
       </section>
     </div>

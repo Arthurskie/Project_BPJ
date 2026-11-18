@@ -143,11 +143,11 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             <div className="flex items-center gap-2">
               <Shield className="w-3.5 h-3.5 text-red-700 dark:text-red-400 shrink-0" />
               <p className="text-[11px] font-semibold text-slate-900 dark:text-white truncate">
-                {user?.role === 'super_admin' ? 'Super Administrator' : 'Petugas Verifikator'}
+                {user?.role || 'Peran belum tersedia'}
               </p>
             </div>
             <p className="text-[10px] text-slate-500 dark:text-neutral-400 mt-1 font-mono truncate">
-              {user?.name || 'Petugas'}
+              {user?.nama || user?.email || 'Akun'}
             </p>
           </div>
         </div>

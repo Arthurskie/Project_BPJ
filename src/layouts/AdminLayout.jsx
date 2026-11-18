@@ -104,14 +104,14 @@ export default function AdminLayout() {
                 className="flex items-center gap-2.5 p-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer text-left"
               >
                 <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-md bg-slate-800 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : 'P'}
+                  {user?.nama ? user.nama.charAt(0).toUpperCase() : 'P'}
                 </div>
                 <div className="hidden sm:block text-left leading-tight">
                   <p className="text-xs font-semibold text-slate-900 dark:text-white truncate max-w-[140px]">
-                    {user?.name || 'Petugas'}
+                    {user?.nama || user?.email || 'Akun'}
                   </p>
                   <p className="text-[10px] text-slate-400 dark:text-neutral-500 font-mono">
-                    {user?.nip ? user.nip.slice(0, 10) + '...' : 'Petugas Dinas'}
+                    {user?.nip ? user.nip.slice(0, 10) + '...' : 'NIP belum diisi'}
                   </p>
                 </div>
               </button>
@@ -121,14 +121,14 @@ export default function AdminLayout() {
                 <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-slate-200 dark:border-neutral-800 overflow-hidden origin-top-right animate-dropdown z-50 py-1.5 text-xs">
                   <div className="px-3.5 py-2.5 border-b border-slate-100 dark:border-neutral-800">
                     <p className="font-semibold text-slate-900 dark:text-white truncate">
-                      {user?.name || 'Petugas'}
+                      {user?.nama || user?.email || 'Akun'}
                     </p>
                     <p className="text-[11px] text-slate-400 dark:text-neutral-500 truncate mt-0.5">
-                      {user?.email || 'admin@kelurahan.go.id'}
+                      {user?.email || 'Email belum tersedia'}
                     </p>
                     <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/50 px-2 py-0.5 rounded">
                       <ShieldCheck size={11} />
-                      <span>{user?.role === 'super_admin' ? 'Super Admin' : 'Verifikator Loket'}</span>
+                      <span>{user?.role || 'Peran belum tersedia'}</span>
                     </div>
                   </div>
 

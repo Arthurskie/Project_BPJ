@@ -1,0 +1,10 @@
+[functions.submit-application]
+verify_jwt = false
+[functions.track-application]
+verify_jwt = false
+[functions.upload-attachment]
+verify_jwt = false
+[functions.invite-admin]
+verify_jwt = true
+[functions.cleanup-attachments]
+verify_jwt = false

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   History,
   Search,
@@ -13,14 +13,21 @@ import EmptyState from '../../components/EmptyState';
 
 const ACTION_FILTERS = [
   { label: 'Semua Aktivitas', value: 'all' },
-  { label: 'Persetujuan Surat', value: 'verify_submission' },
-  { label: 'Penolakan Surat', value: 'reject_submission' },
-  { label: 'Input Walk-in Loket', value: 'create_walkin' },
-  { label: 'Ubah Status', value: 'update_status' }
+  { label: 'Data Ditambahkan', value: 'insert' },
+  { label: 'Data Dihapus', value: 'delete' },
+  { label: 'Input Walk-in Loket', value: 'walkin_submitted' },
+  { label: 'Ubah Status', value: 'status_changed' }, { label: 'Data Diubah', value: 'update' }, { label: 'Undangan Admin', value: 'admin_invited' }
 ];
+
+function formatAuditDetails(details) {
+  if (details == null) return '-';
+  if (typeof details === 'string') return details;
+  return JSON.stringify(details);
+}
 
 export default function Activity() {
   const [logs, setLogs] = useState([]);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionFilter, setActionFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -47,7 +54,7 @@ export default function Activity() {
           setLogs(res.data);
         }
       } catch {
-        if (active) {  }
+        if (active) setError('Gagal memuat jejak audit.');
       } finally {
         if (active) setLoading(false);
       }
@@ -63,13 +70,13 @@ export default function Activity() {
 
   const getActionIcon = (action) => {
     switch (action) {
-      case 'verify_submission':
+      case 'insert':
         return <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />;
-      case 'reject_submission':
+      case 'delete':
         return <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />;
-      case 'create_walkin':
+      case 'walkin_submitted':
         return <FilePlus2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
-      case 'update_status':
+      case 'status_changed':
         return <RefreshCw className="w-4 h-4 text-amber-600 dark:text-amber-400" />;
       default:
         return <History className="w-4 h-4 text-slate-600 dark:text-neutral-400" />;
@@ -78,25 +85,25 @@ export default function Activity() {
 
   const getActionBadge = (action) => {
     switch (action) {
-      case 'verify_submission':
+      case 'insert':
         return (
           <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-            Disetujui / Diterbitkan
+            Data Ditambahkan
           </span>
         );
-      case 'reject_submission':
+      case 'delete':
         return (
           <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
-            Ditolak
+            Data Dihapus
           </span>
         );
-      case 'create_walkin':
+      case 'walkin_submitted':
         return (
           <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
             Walk-in Loket
           </span>
         );
-      case 'update_status':
+      case 'status_changed':
         return (
           <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
             Ubah Status
@@ -119,7 +126,7 @@ export default function Activity() {
           Log Aktivitas & Audit Trail
         </h2>
         <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">
-          Catatan riwayat seluruh tindakan verifikasi, penerbitan surat, penolakan, dan input loket oleh petugas secara atomik untuk akuntabilitas.
+          Catatan riwayat seluruh tindakan perubahan data, status permohonan, dan input loket oleh petugas secara atomik untuk akuntabilitas.
         </p>
       </div>
 
@@ -137,7 +144,7 @@ export default function Activity() {
           />
         </form>
 
-        {/* Action Filter Pills */}
+        {error && <p role="alert" className="text-red-700">{error}</p>}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {ACTION_FILTERS.map((f) => (
             <button
@@ -195,7 +202,7 @@ export default function Activity() {
                         {getActionIcon(log.action)}
                       </div>
                       <span className="font-bold text-xs text-slate-900 dark:text-white">
-                        {log.adminName}
+                        {log.adminName || log.actor_id || 'Sistem'}
                       </span>
                       {getActionBadge(log.action)}
                     </div>
@@ -209,7 +216,7 @@ export default function Activity() {
                   </div>
 
                   <p className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed">
-                    {log.details}
+                    {formatAuditDetails(log.details)}
                   </p>
 
                   {log.targetId && (
@@ -229,4 +236,3 @@ export default function Activity() {
     </div>
   );
 }
-

@@ -1,123 +1,17 @@
-import { apiRequest, localDB } from './baseAPI';
-
-/**
- * Service API untuk Pencatatan dan Penelusuran Jejak Audit (Audit Trail / Activity Log).
- * Menyimpan riwayat setiap tindakan admin/petugas untuk akuntabilitas sistem.
- */
-export const auditLogAPI = {
-  /**
-   * Mencatat aksi admin/petugas ke dalam audit log
-   * @param {Object} param0 
-   * @param {string} param0.adminId - ID unik admin pelaksana
-   * @param {string} param0.adminName - Nama lengkap admin
-   * @param {string} param0.action - Kode aksi (verify_submission, reject_submission, create_walkin, update_status, generate_letter)
-   * @param {string} param0.targetId - ID target (misal id permohonan atau kode tracking)
-   * @param {string} [param0.targetType='submission'] - Tipe entitas target ('submission', 'letter', 'user')
-   * @param {string} param0.details - Keterangan rinci tindakan
-   */
-  logAction: async ({ adminId, adminName, action, targetId, targetType = 'submission', details }) => {
-    const entry = {
-      id: `log-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      adminId: adminId || 'sys-admin',
-      adminName: adminName || 'Petugas Sistem',
-      action,
-      targetId,
-      targetType,
-      details: details || '-',
-      timestamp: new Date().toISOString()
-    };
-
-    try {
-      const remoteRes = await apiRequest('/audit-logs', {
-        method: 'POST',
-        body: JSON.stringify(entry)
-      });
-      if (remoteRes) return remoteRes;
-    } catch {
-      // fallback ke lokal
-    }
-
-    const logs = localDB.getAuditLogs();
-    logs.unshift(entry);
-    localDB.saveAuditLogs(logs);
-
-    return {
-      success: true,
-      message: 'Aktivitas berhasil dicatat dalam audit trail.',
-      data: entry
-    };
-  },
-
-  /**
-   * Mengambil riwayat audit log dengan opsi filter dan pencarian
-   * @param {Object} filter 
-   * @param {string} [filter.adminId]
-   * @param {string} [filter.action]
-   * @param {string} [filter.search]
-   * @param {number} [filter.limit]
-   */
-  getAuditLogs: async (filter = {}) => {
-    try {
-      const query = new URLSearchParams(filter).toString();
-      const remoteRes = await apiRequest(`/audit-logs${query ? `?${query}` : ''}`, { method: 'GET' });
-      if (remoteRes) return remoteRes;
-    } catch {
-      // fallback ke lokal
-    }
-
-    let logs = localDB.getAuditLogs();
-
-    if (filter.adminId && filter.adminId !== 'all') {
-      logs = logs.filter((l) => l.adminId === filter.adminId);
-    }
-
-    if (filter.action && filter.action !== 'all') {
-      logs = logs.filter((l) => l.action === filter.action);
-    }
-
-    if (filter.search) {
-      const q = filter.search.toLowerCase();
-      logs = logs.filter(
-        (l) =>
-          l.adminName?.toLowerCase().includes(q) ||
-          l.details?.toLowerCase().includes(q) ||
-          l.targetId?.toLowerCase().includes(q) ||
-          l.action?.toLowerCase().includes(q)
-      );
-    }
-
-    if (filter.limit && filter.limit > 0) {
-      logs = logs.slice(0, filter.limit);
-    }
-
-    return {
-      success: true,
-      data: logs,
-      total: logs.length
-    };
-  },
-
-  /**
-   * Mengambil riwayat log spesifik untuk satu target (misal satu permohonan surat)
-   * @param {string} targetId 
-   */
-  getLogsByTarget: async (targetId) => {
-    try {
-      const remoteRes = await apiRequest(`/audit-logs/target/${encodeURIComponent(targetId)}`, { method: 'GET' });
-      if (remoteRes) return remoteRes;
-    } catch {
-      // fallback ke lokal
-    }
-
-    const logs = localDB.getAuditLogs();
-    const filtered = logs.filter((l) => l.targetId === targetId);
-
-    return {
-      success: true,
-      data: filtered,
-      total: filtered.length
-    };
-  }
+import {getSupabase} from '../lib/supabase.js';
+import {safeError} from './adapterUtils.js';
+const map=r=>({...r,action:r.aksi,targetType:r.entitas,targetId:r.entitas_id,details:r.detail,timestamp:r.created_at,adminId:r.actor_id});
+export const auditLogAPI={
+ async getAuditLogs(filter={}){
+  const page=Math.max(1,Number(filter.page)||1),pageSize=Math.min(100,Math.max(1,Number(filter.pageSize||filter.limit)||50));
+  let q=getSupabase().from('log_aktivitas').select('*',{count:'exact'}).order('created_at',{ascending:false});
+  if(filter.action&&filter.action!=='all')q=q.eq('aksi',filter.action);
+  if(filter.adminId&&filter.adminId!=='all')q=q.eq('actor_id',filter.adminId);
+  if(filter.targetId)q=q.eq('entitas_id',filter.targetId);
+  if(filter.search){const term=String(filter.search).replace(/[^\p{L}\p{N} @._-]/gu,'').slice(0,100);if(term)q=q.or(`aksi.ilike.%${term}%,entitas.ilike.%${term}%,entitas_id.ilike.%${term}%`);}
+  const {data,error,count}=await q.range((page-1)*pageSize,page*pageSize-1);if(error)throw safeError(error);
+  return {success:true,data:data.map(map),pagination:{page,pageSize,total:count,totalPages:Math.ceil(count/pageSize)}};
+ },
+ getLogsByTarget(targetId){return this.getAuditLogs({targetId});}
 };
-
 export default auditLogAPI;

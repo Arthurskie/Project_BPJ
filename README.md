@@ -1,16 +1,19 @@
-# React + Vite
+﻿# Portal e-Surat
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React/Vite interface with Supabase-only catalog, administration, anonymous applications and two-code tracking. There is no local data/auth fallback and no official letter generation.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```sh
+npm install
+npm run dev
+npm test
+npm run lint
+npm run build
+```
 
-## React Compiler
+Copy `.env.example` to `.env.local` and set public frontend configuration. Never add server secrets to a `VITE_` variable. The Turnstile site key is public; server verification, rate limiting and file scanning require separate operator configuration.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+See the Supabase implementation handoff in `supabase/README.md` for additive migrations, Edge deployment requirements, release gates, and source-versus-live verification limitations. Baseline reference SQL is not an install migration and must not be replayed on an existing project.
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+No migrations or Edge Functions are deployed automatically by frontend builds. A successful build is not evidence of database RLS, scanner, SMTP, rate limiter or live end-to-end behavior.
